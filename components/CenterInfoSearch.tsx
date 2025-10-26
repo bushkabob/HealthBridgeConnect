@@ -85,7 +85,7 @@ function SiteCard({ site, color, textColor, unit }: CenterInfoSearchProps) {
                 </View>
                 
                 <View style={{ flexGrow: 1, alignItems: "center", flexDirection: "row", justifyContent: "flex-end" }}>
-                    <Text style={{color: textColor}} >{site["distance"].toFixed(1) + " " + unit}</Text>
+                    <Text style={{color: textColor}} >{ ((unit === "mi" ? 0.621371 : 1) * site["distance"]).toFixed(1) + " " + unit}</Text>
                     <Ionicons
                         name="chevron-forward"
                         size={24}

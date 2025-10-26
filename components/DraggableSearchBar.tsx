@@ -13,13 +13,16 @@ import { runOnJS } from "react-native-worklets";
 type DraggableSearchBarProps = {
 	searchContent?: React.ReactNode;
 	children?: React.ReactNode;
+	searchActiveCotent?: React.ReactNode
+	searchValue: string
+	setSearchValue: Function
 }
 
-const DraggableSearchBar: React.FC<DraggableSearchBarProps> = ({children, searchContent}) => {
+const DraggableSearchBar: React.FC<DraggableSearchBarProps> = ({children, searchContent, searchActiveCotent, searchValue, setSearchValue}) => {
+	const [searchFocused, setSearchFocused] = useState<boolean>(false)
+
 	const themeBack = useThemeColor({}, 'background');
 	const themeText = useThemeColor({}, 'text');
-
-	const [bounces, setBounces] = useState<boolean>(true);
 
 	const TextInputRef = React.useRef<TextInput>(null);
 	const ScrollViewRef = React.useRef<Animated.ScrollView>(null)
@@ -103,18 +106,7 @@ const DraggableSearchBar: React.FC<DraggableSearchBarProps> = ({children, search
 	const scrollHandler = useAnimatedScrollHandler({
 		onScroll: (event) => {
 			scrollY.value = event.contentOffset.y;
-			if(event.contentOffset.y > -64) {
-				runOnJS(setBounces)(true)
-			}
-			// if(scrollY
-			// scrollY.value < -64 ? (runOnJS(setScrollEnabled)(false)) : (runOnJS(setScrollEnabled)(true))
 		},
-
-		onMomentumEnd: (event) => {
-			if(event.contentOffset.y == -64) {
-				runOnJS(setBounces)(false)
-			}
-		}
 	});
 
 	return (
@@ -128,13 +120,23 @@ const DraggableSearchBar: React.FC<DraggableSearchBarProps> = ({children, search
 							<GlassContainer>
 									<GlassView style={{zIndex: 30, width: "100%", alignItems: "center", paddingBottom: 10, height: "100%"}} >
 										<View style={{backgroundColor: "gray", height: 4, marginHorizontal: 10, marginVertical: 4, borderRadius: 20, width: 50, zIndex: 100}} />
-										<Pressable onPress={()=>TextInputRef.current?.focus()} style={{alignSelf: "stretch", zIndex: 100}} >
-											<GlassView tintColor={themeBack} style={{ flexDirection: "row", alignSelf: "stretch", alignItems: "center", height: 40, marginHorizontal: 10, marginVertical: 2, borderRadius: 80}} >
-												<Ionicons name="search" size={20} color={themeText} style={{ marginLeft: 10, marginRight: 5 }} />
-												<TextInput onFocus={()=>viewHeight.value = withTiming(maxHeight, config)} ref={TextInputRef} placeholder="Search FQHCs" placeholderTextColor={themeText} style={{width: "100%", color: themeText}} />
-											</GlassView>
-										</Pressable>
-										<View style={{top: 0, bottom: 0, position: "absolute"}}>
+										<View style={{width: "100%", flexDirection: "row", alignItems: "center", zIndex: 100}} >
+											<Pressable onPress={()=>TextInputRef.current?.focus()} style={{alignSelf: "stretch", flexGrow: 1}} >
+												<GlassView tintColor={themeBack} style={{ flexDirection: "row", alignSelf: "stretch", alignItems: "center", height: 40, marginHorizontal: 10, marginVertical: 2, borderRadius: 80}} >
+													<Ionicons name="search" size={20} color={themeText} style={{ marginLeft: 10, marginRight: 5 }} />
+													<TextInput onFocus={()=>{viewHeight.value = withTiming(maxHeight, config); setSearchFocused(true)}} value={searchValue} onChangeText={(val)=>setSearchValue(val)} ref={TextInputRef} placeholder="Search FQHCs" placeholderTextColor={themeText} style={{color: themeText}} />
+												</GlassView>
+											</Pressable>
+											{
+												searchFocused &&
+												<Pressable onPress={()=>{setSearchFocused(false); setSearchValue("")}} >
+													<GlassView isInteractive tintColor={themeBack} style={{borderRadius: 80, padding: 8, marginRight: 20}} >
+														<Ionicons name="close" size={20} color={themeText} />
+													</GlassView>
+												</Pressable>
+											}
+										</View>
+										<View style={{top: 0, bottom: 0, width: "100%", position: "absolute"}}>
 											{/* <Animated.View
 												style={[
 												{
@@ -156,7 +158,8 @@ const DraggableSearchBar: React.FC<DraggableSearchBarProps> = ({children, search
 												contentInset={{top: 64, bottom: 20}} 
 												style={{zIndex: 20}}
 												ref={ScrollViewRef}
-											>
+											>	
+												{(searchFocused || searchValue !== "") && searchActiveCotent}
 												{searchContent}
 											</Animated.ScrollView>
 											

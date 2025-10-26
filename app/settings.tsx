@@ -97,14 +97,13 @@ const Settings = () => {
                     {searchRadius.toFixed(0)}{" "}
                     {unit === "Imperial" ? "mi" : "km"}
                 </Text>
-               
-                    <Slider
-                        minimumValue={1}
-                        maximumValue={30}
-                        style={{marginHorizontal: 40 }}
-                        value={searchRadius}
-                        onValueChange={(val) => updateRadius(val)}
-                    />
+                <Slider
+                    minimumValue={1}
+                    maximumValue={30}
+                    style={{ marginHorizontal: 40 }}
+                    value={searchRadius}
+                    onValueChange={(val) => updateRadius(val)}
+                />
             </View>
         </View>
     );
@@ -124,7 +123,7 @@ const styles = StyleSheet.create({
         shadowRadius: 2.22,
 
         elevation: 3,
-        gap: 10
+        gap: 10,
     },
 });
 

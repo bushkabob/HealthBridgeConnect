@@ -4,6 +4,7 @@ import { useThemeColor } from "@/hooks/use-theme-color";
 import useDatabase from "@/hooks/useDatabase";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import SegmentedControl from "@react-native-segmented-control/segmented-control";
 import { GlassView } from "expo-glass-effect";
 import * as Location from "expo-location";
 import { router, useFocusEffect } from "expo-router";
@@ -14,7 +15,13 @@ import { FQHCSite } from "./types";
 
 export default function Map() {
     const [locationColor, setLocationColor] = useState<string>("gray");
+
+    const [allCenters, setAllCenters] = useState<FQHCSite[]>([]);
     const [nearbyCenters, setNearbyCenters] = useState<FQHCSite[]>([]);
+    const [displayCenters, setDisplayCenters] = useState<FQHCSite[]>([]);
+
+    const [searchValue, setSearchValue] = useState<string>("");
+    const [searchArea, setSearchArea] = useState<string>("Nearby");
 
     const [searchRadius, setSearchRadius] = useState<number>(10);
     const [unit, setUnit] = useState<string>("Imperial");
@@ -48,48 +55,73 @@ export default function Map() {
 
     useEffect(() => {
         if (!loading) {
+            try {
+                query("SELECT * FROM centers;").then((vals) => {
+                    const centers = vals as FQHCSite[];
+                    setAllCenters(centers);
+                });
+            } catch (error) {
+                console.error("Error querying database:", error);
+            }
+        }
+    }, [loading]);
+
+    const determineNearbyCenters = (refLat: number, refLon: number) => {
+        const filteredCenters = allCenters
+            .map((val) => {
+                const distance = haversineDistance(
+                    refLat,
+                    refLon,
+                    Number(
+                        val["Geocoding Artifact Address Primary Y Coordinate"]
+                    ),
+                    Number(
+                        val["Geocoding Artifact Address Primary X Coordinate"]
+                    )
+                );
+                val["distance"] = distance;
+                return { ...val };
+            })
+            .filter(
+                (val) =>
+                    val.distance * (unit === "Imperial" ? 0.621371 : 1) <
+                    searchRadius
+            )
+            .sort((a, b) => a.distance - b.distance);
+        console.log("filtered lenght: " + filteredCenters.length)
+        setNearbyCenters(filteredCenters)
+    };
+
+    const searchCenters = (centerOptions: FQHCSite[]) => {
+        setSearchingCenters(true);
+        const filteredCenters = centerOptions.filter((val) => {
+            const address = `${val["Site Address"]}, ${val["Site City"]}, ${val["Site State Abbreviation"]} ${val["Site Postal Code"]}`
+            const lowerSearch = searchValue.toLowerCase()
+            return address.toLowerCase().includes(lowerSearch) || val["Site Name"].toLowerCase().includes(lowerSearch)
+        }
+        ).sort((a, b) => a.distance - b.distance)
+        if(filteredCenters.length > 100) { filteredCenters.length = 100 }
+        setSearchingCenters(false);
+        return filteredCenters
+    }
+
+    useEffect(() => {
+        if(allCenters.length > 0) {
+            searchValue === "" ? setDisplayCenters(nearbyCenters) : setDisplayCenters(searchCenters(searchArea === "Nearby" ? nearbyCenters : allCenters))
+        }
+    }, [searchValue, nearbyCenters])
+
+    useEffect(() => {
+        if (allCenters.length > 0) {
             setSearchingCenters(true);
             getCurrentLocation(async (location) => {
-                try {
-                    // Step 1: Fetch all centers (no math in SQL)
-                    const vals = await query("SELECT * FROM centers;");
-                    const lat = location.coords.latitude;
-                    const lon = location.coords.longitude;
-
-                    // Step 2: Compute distance in JS and filter
-                    const processed = (vals as FQHCSite[])
-                        .map((val) => {
-                            const centerLat = Number(
-                                val[
-                                    "Geocoding Artifact Address Primary Y Coordinate"
-                                ]
-                            );
-                            const centerLon = Number(
-                                val[
-                                    "Geocoding Artifact Address Primary X Coordinate"
-                                ]
-                            );
-                            const distance =
-                                (unit === "Imperial" ? 0.621371 : 1) *
-                                haversineDistance(
-                                    lat,
-                                    lon,
-                                    centerLat,
-                                    centerLon
-                                );
-                            return { ...val, distance };
-                        })
-                        .filter((val) => val.distance < searchRadius)
-                        .sort((a, b) => a.distance - b.distance);
-
-                    setNearbyCenters(processed);
-                } catch (error) {
-                    console.error("Error querying database:", error);
-                }
+                const lat = location.coords.latitude;
+                const lon = location.coords.longitude;
+                determineNearbyCenters(lat, lon);
+                setSearchingCenters(false);
             });
-            setSearchingCenters(false);
         }
-    }, [loading, searchRadius, unit]);
+    }, [searchRadius, unit, allCenters]);
 
     const moveToLocation = (location: Location.LocationObject) => {
         if (mapRef.current) {
@@ -166,7 +198,7 @@ export default function Map() {
                 showsMyLocationButton
                 showsUserLocation
             >
-                {nearbyCenters.map((center) => (
+                {displayCenters.map((center) => (
                     <Marker
                         key={center["BPHC Assigned Number"]}
                         coordinate={{
@@ -188,29 +220,31 @@ export default function Map() {
             </MapView>
 
             <DraggableSearchBar
+                searchValue={searchValue}
+                setSearchValue={setSearchValue}
                 searchContent={
-                    <>
-                        {searchingCenters ? (
-                            <View style={{width: "100%", height: "100%", marginTop: 10, alignItems: "center", justifyContent: "center"}} >
-                                <ActivityIndicator color={themeText} />
-                            </View>
-                        ) : (
-                            nearbyCenters.length > 0 ?
-                            nearbyCenters.map((center) => (
-                                <CenterInfoSearch
-                                    textColor={themeText}
-                                    color={themeBack}
-                                    key={center["BPHC Assigned Number"]}
-                                    site={center}
-                                    unit={unit === "Imperial" ? "mi" : "km"}
-                                />
-                            ))
-                            :
-                            <View style={{width: "100%", height: "100%", marginTop: 10, alignItems: "center", justifyContent: "center"}} >
-                                <Text style={{color: themeText, fontWeight: "bold"}} >No Centers within Search Area</Text>
-                            </View>
-                        )}
-                    </>
+                    <SearchResults themeBack={themeBack} themeText={themeText} unit={unit} searchingCenters={searchingCenters} displayCenters={displayCenters} />
+                }
+                searchActiveCotent={
+                    <View
+                        style={{
+                            margin: 5,
+                            paddingHorizontal: 10,
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}
+                    >
+                        <SegmentedControl
+                            onChange={() =>
+                                setSearchArea((val) =>
+                                    val === "All" ? "Nearby" : "All"
+                                )
+                            }
+                            values={["Search Current Area", "Search All"]}
+                            selectedIndex={searchArea === "Nearby" ? 0 : 1}
+                            style={{ width: "100%" }}
+                        />
+                    </View>
                 }
             >
                 <GlassView
@@ -238,4 +272,61 @@ export default function Map() {
             </DraggableSearchBar>
         </View>
     );
+}
+
+interface SearchResultsProps {
+    searchingCenters: boolean,
+    themeText: string,
+    themeBack: string,
+    unit: string
+    displayCenters: FQHCSite[]
+}
+
+const SearchResults = (props: SearchResultsProps) => {
+    return (
+        <>
+            {props.searchingCenters ? (
+                <View
+                    style={{
+                        width: "100%",
+                        height: "100%",
+                        marginTop: 10,
+                        alignItems: "center",
+                        justifyContent: "center",
+                    }}
+                >
+                    <ActivityIndicator color={props.themeText} />
+                </View>
+            ) : props.displayCenters.length > 0 ? (
+                props.displayCenters.map((center) => (
+                    <CenterInfoSearch
+                        textColor={props.themeText}
+                        color={props.themeBack}
+                        key={center["BPHC Assigned Number"]}
+                        site={center}
+                        unit={props.unit === "Imperial" ? "mi" : "km"}
+                    />
+                ))
+            ) : (
+                <View
+                    style={{
+                        width: "100%",
+                        height: "100%",
+                        marginTop: 10,
+                        alignItems: "center",
+                        justifyContent: "center",
+                    }}
+                >
+                    <Text
+                        style={{
+                            color: props.themeText,
+                            fontWeight: "bold",
+                        }}
+                    >
+                        No Centers within Search Area
+                    </Text>
+                </View>
+            )}
+        </>
+    )
 }
