@@ -306,6 +306,7 @@ interface SearchResultsProps {
     unit: string;
     displayCenters: FQHCSite[];
     header?: ReactElement;
+    headerOffset?: number
     scrollEnabled?: boolean
 }
 
@@ -314,6 +315,8 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
         <>
             <FlatList
                 contentContainerStyle={{ paddingBottom: 64 }}
+                contentInset={{top: props.headerOffset}}
+                scrollIndicatorInsets={{top: props.headerOffset}}
                 data={props.displayCenters}
                 ListHeaderComponent={props.header}
                 removeClippedSubviews

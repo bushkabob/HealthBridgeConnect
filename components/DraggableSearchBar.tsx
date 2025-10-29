@@ -28,6 +28,8 @@ import Animated, {
     withTiming,
 } from "react-native-reanimated";
 
+import { BlurView } from "expo-blur";
+
 type Props = {
     searchContent: React.ReactElement;
     searchActiveCotent?: React.ReactElement;
@@ -203,76 +205,79 @@ const DraggableSearchBar: React.FC<Props> = ({
                             {/* Content */}
                             <GlassView style={styles.glass}>
                                 {/* Handle */}
-                                <View style={styles.handle} />
+                                <BlurView style={styles.header} >
+                                    <View style={styles.handle} />
 
-                                {/* Search Row */}
-                                <View style={styles.row}>
-                                    <Pressable
-                                        style={{ flex: 1 }}
-                                        onPress={() =>
-                                            textInputRef.current?.focus()
-                                        }
-                                    >
-                                        <GlassView
-                                            tintColor={themeBack}
-                                            style={styles.inputBox}
-                                        >
-                                            <Ionicons
-                                                name="search"
-                                                size={20}
-                                                color={themeText}
-                                                style={{ marginRight: 8 }}
-                                            />
-                                            <TextInput
-                                                ref={textInputRef}
-                                                onFocus={() => {
-                                                    setFocused(true);
-                                                    translateY.value =
-                                                        withSpring(SNAP_TOP);
-                                                }}
-                                                value={searchValue}
-                                                onChangeText={setSearchValue}
-                                                placeholder="Search FQHCs"
-                                                placeholderTextColor={themeText}
-                                                style={{
-                                                    color: themeText,
-                                                    flex: 1,
-                                                }}
-                                            />
-                                        </GlassView>
-                                    </Pressable>
-
-                                    {focused && (
+                                    {/* Search Row */}
+                                    <View style={styles.row}>
                                         <Pressable
-                                            onPress={() => {
-                                                setFocused(false);
-                                                setSearchValue("");
-                                                translateY.value =
-                                                    withSpring(SNAP_BOTTOM);
-                                            }}
+                                            style={{ flex: 1 }}
+                                            onPress={() =>
+                                                textInputRef.current?.focus()
+                                            }
                                         >
                                             <GlassView
-                                                isInteractive
                                                 tintColor={themeBack}
-                                                style={{
-                                                    padding: 8,
-                                                    borderRadius: 100,
-                                                }}
+                                                style={styles.inputBox}
                                             >
                                                 <Ionicons
-                                                    name="close"
-                                                    size={22}
+                                                    name="search"
+                                                    size={20}
                                                     color={themeText}
-                                                    styl={{ padding: 20 }}
+                                                    style={{ marginRight: 8 }}
+                                                />
+                                                <TextInput
+                                                    ref={textInputRef}
+                                                    onFocus={() => {
+                                                        setFocused(true);
+                                                        translateY.value =
+                                                            withSpring(SNAP_TOP);
+                                                    }}
+                                                    value={searchValue}
+                                                    onChangeText={setSearchValue}
+                                                    placeholder="Search FQHCs"
+                                                    placeholderTextColor={themeText}
+                                                    style={{
+                                                        color: themeText,
+                                                        flex: 1,
+                                                    }}
                                                 />
                                             </GlassView>
                                         </Pressable>
-                                    )}
-                                </View>
+
+                                        {focused && (
+                                            <Pressable
+                                                onPress={() => {
+                                                    setFocused(false);
+                                                    setSearchValue("");
+                                                    translateY.value =
+                                                        withSpring(SNAP_BOTTOM);
+                                                }}
+                                            >
+                                                <GlassView
+                                                    isInteractive
+                                                    tintColor={themeBack}
+                                                    style={{
+                                                        padding: 8,
+                                                        borderRadius: 100,
+                                                    }}
+                                                >
+                                                    <Ionicons
+                                                        name="close"
+                                                        size={22}
+                                                        color={themeText}
+                                                        styl={{ padding: 20 }}
+                                                    />
+                                                </GlassView>
+                                            </Pressable>
+                                        )}
+                                    </View>
+                                </BlurView>
                                 {/* Scroll / List content */}
-                                <View style={{ flex: 1, width: "100%" }}>
+                                <View style={{ height: "100%", width: "100%" }}>
                                     {React.cloneElement(searchContent as any, {
-                                        header: focused && searchActiveCotent,
+                                        headerOffset: MIN_HEIGHT,
+                                        header: focused && searchActiveCotent, 
                                     })}
                                 </View>
                             </GlassView>
@@ -319,8 +324,15 @@ const styles = StyleSheet.create({
         height: 40,
         paddingHorizontal: 12,
         backgroundColor: "rgba(255,255,255,0.15)",
-        borderRadius: 40,
+        borderRadius: 40
     },
+    header: {
+        width: "100%",
+        alignItems: "center",
+        position: "absolute",
+        top: 0,
+        zIndex: 100,
+    }
 });
 
 export default DraggableSearchBar;
