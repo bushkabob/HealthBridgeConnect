@@ -1,7 +1,7 @@
 import { useThemeColor } from "@/hooks/use-theme-color";
 import useDatabase from "@/hooks/useDatabase";
 import { Ionicons } from "@expo/vector-icons";
-import { Stack, useLocalSearchParams, useNavigation } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -14,7 +14,6 @@ import {
 import { FQHCSite } from "./types";
 
 const CenterDetails = () => {
-    const navigation = useNavigation();
     const { id, name } = useLocalSearchParams();
     const [siteInfo, setSiteInfo] = useState<FQHCSite | null>(null);
 

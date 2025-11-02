@@ -18,14 +18,6 @@ async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
 
     databaseInitPromise = (async () => {
         try {
-            // Load the DB asset
-            const asset = Asset.fromModule(
-                require(`../assets/database/${DB_NAME}`)
-            );
-            await asset.downloadAsync().catch((err) => {
-                console.error("Failed to download DB asset:", err);
-                throw err;
-            });
 
             // Destination: app's document directory
             const dbFile = new File(Paths.document, DB_NAME);
@@ -33,6 +25,14 @@ async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
             // Copy DB if it doesn’t exist
             if (!dbFile.exists) {
                 try {
+                    // Load the DB asset
+                    const asset = Asset.fromModule(
+                        require(`../assets/database/${DB_NAME}`)
+                    );
+                    await asset.downloadAsync().catch((err) => {
+                        console.error("Failed to download DB asset:", err);
+                        throw err;
+                    });
                     const assetFile = new File(asset.localUri!);
                     await assetFile.copy(dbFile);
                 } catch (error) {

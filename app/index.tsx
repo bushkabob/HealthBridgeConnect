@@ -5,7 +5,7 @@ import useDatabase from "@/hooks/useDatabase";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import SegmentedControl from "@react-native-segmented-control/segmented-control";
-import { GlassView } from "expo-glass-effect";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import * as Location from "expo-location";
 import { router, useFocusEffect } from "expo-router";
 import React, {
@@ -16,7 +16,13 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import {
+    ActivityIndicator,
+    Platform,
+    Pressable,
+    Text,
+    View,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Callout, Marker } from "react-native-maps";
 import Animated, { useAnimatedScrollHandler } from "react-native-reanimated";
@@ -243,122 +249,182 @@ export default function Map() {
         <View
             style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
         >
-            <GestureHandlerRootView style={{position: "absolute", top: 0, right: 0, left: 0, bottom: 0}}>
-            
-            <MapView
-                onPanDrag={() => {
-                    locationColor !== "gray" && setLocationColor("gray");
+            <GestureHandlerRootView
+                style={{
+                    position: "absolute",
+                    top: 0,
+                    right: 0,
+                    left: 0,
+                    bottom: 0,
                 }}
-                mapPadding={{ top: 0, right: 0, bottom: 50, left: 20 }}
-                ref={mapRef}
-                style={{ width: "100%", height: "100%" }}
-                showsMyLocationButton
-                showsUserLocation
             >
-                {displayCenters.map((center) => (
-                    <Marker
-                        key={center["BPHC Assigned Number"]}
-                        ref={(ref) => {
-                            if (ref) {
-                                //@ts-ignore
-                                markerRefs.current[
-                                    center["BPHC Assigned Number"]
-                                ] = ref;
-                            } else {
-                                delete markerRefs.current[
-                                    center["BPHC Assigned Number"]
-                                ];
-                            }
-                        }}
-                        coordinate={{
-                            latitude: Number(
-                                center[
-                                    "Geocoding Artifact Address Primary Y Coordinate"
-                                ]
-                            ),
-                            longitude: Number(
-                                center[
-                                    "Geocoding Artifact Address Primary X Coordinate"
-                                ]
-                            ),
-                        }}
-                    >
-                        <Callout>
-                            <View style={{width: 100, height: 100}} >
-                                <Text>{center["Site Name"]}</Text>
-                                <Text>{center["Site Address"]}</Text>
-                            </View>
-                        </Callout>
-                    </Marker>
-                ))}
-            </MapView>
-
-            <DraggableSearchBar
-                searchValue={searchValue}
-                setSearchValue={setSearchValue}
-                searchContent={
-                    <SearchResults
-                        themeBack={themeBack}
-                        themeText={themeText}
-                        unit={unit}
-                        markerRefs={markerRefs}
-                        mapRef={mapRef}
-                        searchingCenters={searchingCenters}
-                        displayCenters={displayCenters}
-                    />
-                }
-                searchActiveCotent={
-                    <View
-                        style={{
-                            margin: 5,
-                            paddingHorizontal: 10,
-                            alignItems: "center",
-                            justifyContent: "center",
-                        }}
-                    >
-                        <SegmentedControl
-                            onChange={() =>
-                                setSearchArea((val) =>
-                                    val === "All" ? "Nearby" : "All"
-                                )
-                            }
-                            values={["Search Current Area", "Search All"]}
-                            selectedIndex={searchArea === "Nearby" ? 0 : 1}
-                            style={{ width: "100%" }}
-                        />
-                    </View>
-                }
-            >
-                <GlassView
-                    isInteractive
-                    style={{
-                        padding: 10,
-                        borderRadius: 40,
-                        alignSelf: "flex-end",
-                        gap: 20,
+                <MapView
+                    onPanDrag={() => {
+                        locationColor !== "gray" && setLocationColor("gray");
                     }}
+                    mapPadding={{ top: 0, right: 0, bottom: 50, left: 20 }}
+                    ref={mapRef}
+                    style={{ width: "100%", height: "100%" }}
+                    showsMyLocationButton
+                    showsUserLocation
                 >
-                    <Pressable onPress={updateCenter}>
-                        {!searchingCenters && !loading ? (
-                            <Ionicons name="search" size={30} color={"gray"} />
-                        ) : (
-                            <ActivityIndicator size={30} />
-                        )}
-                    </Pressable>
-                    <Pressable
-                        onPress={() => getCurrentLocation(moveToLocation)}
-                    >
-                        <Ionicons
-                            name="navigate"
-                            size={30}
-                            color={locationColor}
+                    {displayCenters.map((center) => (
+                        <Marker
+                            key={center["BPHC Assigned Number"]}
+                            ref={(ref) => {
+                                if (ref) {
+                                    //@ts-ignore
+                                    markerRefs.current[
+                                        center["BPHC Assigned Number"]
+                                    ] = ref;
+                                } else {
+                                    delete markerRefs.current[
+                                        center["BPHC Assigned Number"]
+                                    ];
+                                }
+                            }}
+                            coordinate={{
+                                latitude: Number(
+                                    center[
+                                        "Geocoding Artifact Address Primary Y Coordinate"
+                                    ]
+                                ),
+                                longitude: Number(
+                                    center[
+                                        "Geocoding Artifact Address Primary X Coordinate"
+                                    ]
+                                ),
+                            }}
+                        >
+                            <Callout
+                                onPress={() => {
+                                    router.push({
+                                        pathname: "/details",
+                                        params: {
+                                            id: center["BPHC Assigned Number"],
+                                            name: center["Site Name"],
+                                        },
+                                    });
+                                }}
+                            >
+                                <View
+                                    style={{
+                                        flexDirection: "row",
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        maxWidth: 250,
+                                        flexWrap: "nowrap",
+                                    }}
+                                >
+                                    <View
+                                        style={{ flexShrink: 1, flexGrow: 1 }}
+                                    >
+                                        <Text ellipsizeMode="tail">
+                                            {center["Site Name"]}
+                                        </Text>
+                                        <Text ellipsizeMode="tail">
+                                            {center["Site Address"]}
+                                        </Text>
+                                    </View>
+
+                                    <Pressable
+                                        style={{
+                                            width: 24,
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            marginLeft: 6,
+                                        }}
+                                    >
+                                        <Ionicons
+                                            size={20}
+                                            name="arrow-forward"
+                                        />
+                                    </Pressable>
+                                </View>
+                            </Callout>
+                        </Marker>
+                    ))}
+                </MapView>
+
+                <DraggableSearchBar
+                    searchValue={searchValue}
+                    setSearchValue={setSearchValue}
+                    searchContent={
+                        <SearchResults
+                            themeBack={themeBack}
+                            themeText={themeText}
+                            unit={unit}
+                            markerRefs={markerRefs}
+                            mapRef={mapRef}
+                            searchingCenters={searchingCenters}
+                            displayCenters={displayCenters}
                         />
-                    </Pressable>
-                    <Pressable onPress={() => router.navigate("/settings")}>
-                        <Ionicons name="settings" size={30} color={"gray"} />
-                    </Pressable>
-                </GlassView>
-            </DraggableSearchBar>
+                    }
+                    searchActiveCotent={
+                        <View
+                            style={{
+                                margin: 5,
+                                paddingHorizontal: 10,
+                                alignItems: "center",
+                                justifyContent: "center",
+                            }}
+                        >
+                            <SegmentedControl
+                                onChange={() =>
+                                    setSearchArea((val) =>
+                                        val === "All" ? "Nearby" : "All"
+                                    )
+                                }
+                                values={["Search Current Area", "Search All"]}
+                                selectedIndex={searchArea === "Nearby" ? 0 : 1}
+                                style={{ width: "100%" }}
+                            />
+                        </View>
+                    }
+                >
+                    <GlassView
+                        isInteractive
+                        style={[
+                            {
+                                padding: 10,
+                                borderRadius: 40,
+                                alignSelf: "flex-end",
+                                gap: 20,
+                            },
+                            isLiquidGlassAvailable()
+                                ? {}
+                                : { backgroundColor: themeBack },
+                        ]}
+                    >
+                        <Pressable onPress={updateCenter}>
+                            {!searchingCenters && !loading ? (
+                                <Ionicons
+                                    name="search"
+                                    size={30}
+                                    color={"gray"}
+                                />
+                            ) : (
+                                <ActivityIndicator size={30} />
+                            )}
+                        </Pressable>
+                        <Pressable
+                            onPress={() => getCurrentLocation(moveToLocation)}
+                        >
+                            <Ionicons
+                                name="navigate"
+                                size={30}
+                                color={locationColor}
+                            />
+                        </Pressable>
+                        <Pressable onPress={() => router.navigate("/settings")}>
+                            <Ionicons
+                                name="settings"
+                                size={30}
+                                color={"gray"}
+                            />
+                        </Pressable>
+                    </GlassView>
+                </DraggableSearchBar>
             </GestureHandlerRootView>
         </View>
     );
@@ -372,23 +438,25 @@ interface SearchResultsProps {
     displayCenters: FQHCSite[];
     markerRefs: any;
     mapRef: RefObject<MapView | null>;
+    flatListRef?: RefObject<Animated.FlatList | null>;
     header?: ReactElement;
     headerOffset?: number;
     scrollEnabled?: boolean;
     scrollHandler?: ReturnType<typeof useAnimatedScrollHandler>;
-    minimizeScroll?: Function
+    minimizeScroll?: Function;
 }
 
 const SearchResults = React.memo((props: SearchResultsProps) => {
-    const flatList = useRef<Animated.FlatList>(null)
-
     return (
         <>
             <Animated.FlatList
-                ref={flatList}
-                contentContainerStyle={{ paddingBottom: 64 }}
-                contentInset={{ top: props.headerOffset }}
+                ref={props.flatListRef}
+                contentContainerStyle={{
+                    paddingBottom: 100,
+                    marginTop: props.headerOffset,
+                }} /**/
                 scrollIndicatorInsets={{ top: props.headerOffset }}
+                showsVerticalScrollIndicator={!(Platform.OS === "android")}
                 data={props.displayCenters}
                 ListHeaderComponent={props.header}
                 removeClippedSubviews
@@ -435,9 +503,18 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
                             },
                             1000
                         );
-                        props.minimizeScroll && props.minimizeScroll()
-                        flatList.current?.scrollToOffset({ animated: true, offset: -1 * (props.headerOffset || 0) });
-                        setTimeout(() => (props.markerRefs.current[val.item["BPHC Assigned Number"]]).showCallout(), 1000)
+                        props.minimizeScroll && props.minimizeScroll();
+                        props.flatListRef?.current?.scrollToOffset({
+                            animated: true,
+                            offset: -1 * (props.headerOffset || 0),
+                        });
+                        setTimeout(
+                            () =>
+                                props.markerRefs.current[
+                                    val.item["BPHC Assigned Number"]
+                                ].showCallout(),
+                            1000
+                        );
                     };
                     return (
                         <CenterInfoSearch
