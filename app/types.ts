@@ -56,3 +56,10 @@ export interface FQHCSite {
     "U.S. Congressional Representative Name": string;
     distance: number;
 }
+
+export interface City {
+    name: string;
+    distance: number
+    lat: number,
+    lon: number
+}

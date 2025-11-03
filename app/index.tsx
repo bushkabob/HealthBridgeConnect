@@ -12,7 +12,6 @@ import React, {
     ReactElement,
     RefObject,
     useEffect,
-    useLayoutEffect,
     useRef,
     useState,
 } from "react";
@@ -26,7 +25,8 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { Callout, Marker } from "react-native-maps";
 import Animated, { useAnimatedScrollHandler } from "react-native-reanimated";
-import { FQHCSite } from "./types";
+import { City, FQHCSite } from "./types";
+import { levenshtein } from "./utils";
 
 export default function Map() {
     const [locationColor, setLocationColor] = useState<string>("gray");
@@ -34,6 +34,7 @@ export default function Map() {
     const [allCenters, setAllCenters] = useState<FQHCSite[]>([]);
     const [nearbyCenters, setNearbyCenters] = useState<FQHCSite[]>([]);
     const [displayCenters, setDisplayCenters] = useState<FQHCSite[]>([]);
+    const [displayCities, setDisplayCities] = useState<City[]>([])
     const [currentCenter, setCurrentCenter] = useState<
         { lat: number; lon: number } | undefined
     >(undefined);
@@ -44,6 +45,10 @@ export default function Map() {
     const [searchRadius, setSearchRadius] = useState<number>(10);
     const [unit, setUnit] = useState<string>("Imperial");
     const [searchingCenters, setSearchingCenters] = useState<boolean>(false);
+
+    const [cities, setCities] = useState<{
+        [key: string]: { lat: number; lon: number };
+    }>({});
 
     const { loading, query } = useDatabase();
 
@@ -111,6 +116,56 @@ export default function Map() {
         setNearbyCenters(filteredCenters);
     };
 
+    const searchCities = (query: string, currentCenter: { lat: number, lon: number }) => {
+        if (!query) return [];
+        const q = query.toLowerCase().trim();
+        const cityKeys = Object.keys(cities);
+        const directMatches: string[] = [];
+
+        // 🔹 Fast substring search first
+        for (const key of cityKeys) {
+            if (key.toLowerCase().includes(q)) {
+                // console.log(key)
+                directMatches.push(key);
+                // if (directMatches.length >= 15) break; // limit results
+            }
+        }
+
+        // ✅ If we found direct matches, return them
+        if (directMatches.length > 0) {
+            console.log(directMatches)
+            return directMatches.map((key) => ({
+                "name": key
+                .split(",")
+                .map((x) => x.trim().replace(/^\w/, (c) => c.toUpperCase()))
+                .join(", "),
+            "lat": cities[key].lat,
+            "lon": cities[key].lon,
+                distance: haversineDistance(cities[key].lat, cities[key].lon, currentCenter.lat, currentCenter.lon),
+            }));
+        }
+
+        // 🔁 Otherwise, fuzzy fallback on first few hundred keys
+        const fuzzyResults = cityKeys
+            .slice(0, 1000) // limit comparisons for performance
+            .map((k) => ({
+                key: k,
+                dist: levenshtein(k, q),
+            }))
+            .sort((a, b) => a.dist - b.dist)
+            .slice(0, 5);
+
+        return fuzzyResults.map(({ key }) => ({
+            "name": key
+                .split(",")
+                .map((x) => x.trim().replace(/^\w/, (c) => c.toUpperCase()))
+                .join(", "),
+            "lat": cities[key].lat,
+            "lon": cities[key].lon,
+            distance: haversineDistance(cities[key].lat, cities[key].lon, currentCenter.lat, currentCenter.lon),
+        }));
+    };
+
     const searchCenters = (centerOptions: FQHCSite[]) => {
         setSearchingCenters(true);
         const filteredCenters = centerOptions
@@ -130,22 +185,35 @@ export default function Map() {
         return filteredCenters;
     };
 
+    //Debounced search
     useEffect(() => {
-        if (allCenters.length > 0) {
-            searchValue === ""
-                ? setDisplayCenters(nearbyCenters)
-                : setDisplayCenters(
-                      searchCenters(
-                          searchArea === "Nearby" ? nearbyCenters : allCenters
-                      )
-                  );
-        }
+        if (allCenters.length === 0) return;
+
+        // create a timeout
+        const handler = setTimeout(() => {
+            if (searchValue === "") {
+                setDisplayCenters(nearbyCenters);
+                setDisplayCities([])
+            } else {
+                setDisplayCenters(
+                    searchCenters(
+                        searchArea === "Nearby" ? nearbyCenters : allCenters
+                    )
+                );
+                const lowerSearch = searchValue.toLowerCase()
+                searchArea === "Nearby" ? setDisplayCities([]) : setDisplayCities(searchCities(lowerSearch, { lat: currentCenter?.lat || 0, lon: currentCenter?.lon || 0 }))
+            }
+        }, 250); // <-- debounce delay (ms)
+
+        // cleanup (cancel previous timeout if user types again)
+        return () => clearTimeout(handler);
     }, [searchValue, nearbyCenters, searchArea]);
 
     useEffect(() => {
         !loading && setSearchingCenters(false);
     }, [displayCenters]);
 
+    //Research when unit, map center, or search radius changes
     useEffect(() => {
         setSearchingCenters(true);
         allCenters.length > 0 &&
@@ -153,6 +221,11 @@ export default function Map() {
             determineNearbyCenters(currentCenter.lat, currentCenter.lon);
     }, [searchRadius, unit, currentCenter]);
 
+    useEffect(() => {
+        setSearchValue("")
+    }, [currentCenter])
+
+    //Get nearby centers when map loads
     useEffect(() => {
         getCurrentLocation(async (location) => {
             const lat = location.coords.latitude;
@@ -226,7 +299,6 @@ export default function Map() {
     };
 
     const updateCenter = () => {
-        console.log("run");
         mapRef &&
             mapRef.current
                 ?.getCamera()
@@ -241,8 +313,47 @@ export default function Map() {
                 });
     };
 
-    useLayoutEffect(() => {
-        getData();
+    useEffect(() => {
+        (async () => {
+            const data = (await import("@/assets/cities.json")) as any;
+            const textCoords: { [key: string]: { lat: number; lon: number } } =
+                {};
+            Object.keys(data).forEach((val) => {
+                if (val != "default") {
+                    const countryObj = data[val];
+                    textCoords[countryObj.name] = {
+                        lat: Number(countryObj["latitude"]),
+                        lon: Number(countryObj["longitude"]),
+                    };
+                    textCoords[countryObj.iso2] = {
+                        lat: Number(countryObj["latitude"]),
+                        lon: Number(countryObj["longitude"]),
+                    };
+                    textCoords[countryObj.iso3] = {
+                        lat: Number(countryObj["latitude"]),
+                        lon: Number(countryObj["longitude"]),
+                    };
+                    Object.keys(countryObj.states).forEach((state) => {
+                        const stateObject = countryObj.states[state];
+                        textCoords[stateObject.name] = {
+                            lat: Number(stateObject.latitude),
+                            lon: Number(stateObject.longitude),
+                        };
+                        // textCoords[stateObject.state_code] = {
+                        //     lat: Number(stateObject.latitude),
+                        //     lon: Number(stateObject.longitude),
+                        // };
+                        stateObject.cities.forEach((city: any) => {
+                            textCoords[city.name + ", " + stateObject.name] = {
+                                lat: Number(city.latitude),
+                                lon: Number(city.longitude),
+                            };
+                        });
+                    });
+                }
+            });
+            setCities(textCoords);
+        })();
     }, []);
 
     return (
@@ -356,8 +467,10 @@ export default function Map() {
                             unit={unit}
                             markerRefs={markerRefs}
                             mapRef={mapRef}
+                            cities={displayCities}
                             searchingCenters={searchingCenters}
                             displayCenters={displayCenters}
+                            setCenter={setCurrentCenter}
                         />
                     }
                     searchActiveCotent={
@@ -436,6 +549,7 @@ interface SearchResultsProps {
     themeBack: string;
     unit: string;
     displayCenters: FQHCSite[];
+    cities: City[]
     markerRefs: any;
     mapRef: RefObject<MapView | null>;
     flatListRef?: RefObject<Animated.FlatList | null>;
@@ -444,9 +558,32 @@ interface SearchResultsProps {
     scrollEnabled?: boolean;
     scrollHandler?: ReturnType<typeof useAnimatedScrollHandler>;
     minimizeScroll?: Function;
+    setCenter: Function
 }
 
 const SearchResults = React.memo((props: SearchResultsProps) => {
+    const locales: ({name: string, id: string, distance: number, isCity: false, lon: number, lat: number} | {name: string, id: string, distance: number, isCity: true, lon: number, lat: number})[] = []
+    props.displayCenters.forEach((val) =>
+        locales.push({
+            name: val["Site Name"],
+            id: val["BPHC Assigned Number"],
+            distance: val["distance"],
+            isCity: false,
+            lat: Number(val["Geocoding Artifact Address Primary Y Coordinate"]),
+            lon: Number(val["Geocoding Artifact Address Primary X Coordinate"])
+        })
+    )
+    props.cities.forEach((val) => {
+        locales.push({
+            name: val.name,
+            id: val.name,
+            distance: val.distance,
+            isCity: true,
+            lat: val.lat,
+            lon: val.lon,
+        })
+    })
+    locales.sort((a, b)=> a.distance <= b.distance ? -1 : 1)
     return (
         <>
             <Animated.FlatList
@@ -457,7 +594,7 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
                 }} /**/
                 scrollIndicatorInsets={{ top: props.headerOffset }}
                 showsVerticalScrollIndicator={!(Platform.OS === "android")}
-                data={props.displayCenters}
+                data={locales}
                 ListHeaderComponent={props.header}
                 removeClippedSubviews
                 initialNumToRender={15}
@@ -485,21 +622,14 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
                     </View>
                 }
                 renderItem={(val) => {
+                    const delta = val.item.isCity ? 0.1 : 0.01
                     const moveToIcon = () => {
                         props.mapRef.current?.animateToRegion(
                             {
-                                latitude: Number(
-                                    val.item[
-                                        "Geocoding Artifact Address Primary Y Coordinate"
-                                    ]
-                                ),
-                                longitude: Number(
-                                    val.item[
-                                        "Geocoding Artifact Address Primary X Coordinate"
-                                    ]
-                                ),
-                                latitudeDelta: 0.01,
-                                longitudeDelta: 0.01,
+                                latitude: val.item.lat,
+                                longitude: val.item.lon,
+                                latitudeDelta: delta,
+                                longitudeDelta: delta,
                             },
                             1000
                         );
@@ -508,21 +638,25 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
                             animated: true,
                             offset: -1 * (props.headerOffset || 0),
                         });
-                        setTimeout(
+                        
+                        !val.item.isCity ? setTimeout(
                             () =>
                                 props.markerRefs.current[
-                                    val.item["BPHC Assigned Number"]
+                                    val.item.id
                                 ].showCallout(),
                             1000
-                        );
+                        ) : props.setCenter({ lat: val.item.lat, lon: val.item.lon })
                     };
+                    console.log(val.item)
                     return (
                         <CenterInfoSearch
                             onClick={moveToIcon}
                             textColor={props.themeText}
                             color={props.themeBack}
-                            key={val.item["BPHC Assigned Number"]}
-                            site={val.item}
+                            key={val.item.id}
+                            distance={val.item.distance}
+                            name={val.item.name}
+                            showCityIcon = {val.item.isCity}
                             unit={props.unit === "Imperial" ? "mi" : "km"}
                         />
                     );
