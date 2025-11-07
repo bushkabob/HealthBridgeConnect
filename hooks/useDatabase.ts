@@ -9,6 +9,20 @@ const DB_NAME = "fqhc.db";
 let databaseInstance: SQLite.SQLiteDatabase | undefined = undefined;
 let databaseInitPromise: Promise<SQLite.SQLiteDatabase> | undefined = undefined;
 
+const downloadDb = async (dbFile: File) => {
+    try {
+        // Load the DB asset
+        const asset = await Asset.loadAsync(
+            require('../assets/database/'+DB_NAME)
+        )
+
+        const assetFile = new File(asset[0].localUri as string);
+        await assetFile.copy(dbFile);
+    } catch (error) {
+        console.log("Error copying DB file:", error);
+    }
+}
+
 async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
     // If already initialized, just return it
     if (databaseInstance) return databaseInstance;
@@ -23,21 +37,11 @@ async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
             const dbFile = new File(Paths.document, DB_NAME);
 
             // Copy DB if it doesn’t exist
-            if (!dbFile.exists) {
-                try {
-                    // Load the DB asset
-                    const asset = Asset.fromModule(
-                        require(`../assets/database/${DB_NAME}`)
-                    );
-                    await asset.downloadAsync().catch((err) => {
-                        console.error("Failed to download DB asset:", err);
-                        throw err;
-                    });
-                    const assetFile = new File(asset.localUri!);
-                    await assetFile.copy(dbFile);
-                } catch (error) {
-                    console.log("Error copying DB file:", error);
+            if (!dbFile.exists || dbFile.size === 0) {
+                if(dbFile.exists) {
+                    dbFile.delete()
                 }
+                downloadDb(dbFile)
             } else {
                 console.log("DB file already exists at", dbFile.uri);
             }
@@ -49,6 +53,7 @@ async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
                 Paths.document.uri
             );
             databaseInstance = db;
+    
 
             console.log("✅ Database initialized and ready");
             return db;

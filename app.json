@@ -52,7 +52,12 @@
           "isAndroidForegroundServiceEnabled": true
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      ["expo-asset",
+      {
+        "assets": ["./assets/cities.json", "./assets/database/fqhc.db"]
+      }
+    ]
     ],
     "experiments": {
       "typedRoutes": true,

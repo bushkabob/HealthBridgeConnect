@@ -1,4 +1,5 @@
 import CenterInfoSearch from "@/components/CenterInfoSearch";
+import CenterMarker from "@/components/CenterMarker";
 import DraggableSearchBar from "@/components/DraggableSearchBar";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import useDatabase from "@/hooks/useDatabase";
@@ -23,7 +24,7 @@ import {
     View,
 } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import MapView, { Callout, Marker } from "react-native-maps";
+import MapView from "react-native-maps";
 import Animated, { useAnimatedScrollHandler } from "react-native-reanimated";
 import { City, FQHCSite } from "./types";
 import { levenshtein } from "./utils";
@@ -396,82 +397,7 @@ export default function Map() {
                     showsMyLocationButton
                     showsUserLocation
                 >
-                    {displayCenters.map((center) => (
-                        <Marker
-                            key={center["BPHC Assigned Number"]}
-                            ref={(ref) => {
-                                if (ref) {
-                                    //@ts-ignore
-                                    markerRefs.current[
-                                        center["BPHC Assigned Number"]
-                                    ] = ref;
-                                } else {
-                                    delete markerRefs.current[
-                                        center["BPHC Assigned Number"]
-                                    ];
-                                }
-                            }}
-                            coordinate={{
-                                latitude: Number(
-                                    center[
-                                        "Geocoding Artifact Address Primary Y Coordinate"
-                                    ]
-                                ),
-                                longitude: Number(
-                                    center[
-                                        "Geocoding Artifact Address Primary X Coordinate"
-                                    ]
-                                ),
-                            }}
-                        >
-                            <Callout
-                                onPress={() => {
-                                    router.push({
-                                        pathname: "/details",
-                                        params: {
-                                            id: center["BPHC Assigned Number"],
-                                            name: center["Site Name"],
-                                        },
-                                    });
-                                }}
-                            >
-                                <View
-                                    style={{
-                                        flexDirection: "row",
-                                        alignItems: "center",
-                                        justifyContent: "space-between",
-                                        maxWidth: 250,
-                                        flexWrap: "nowrap",
-                                    }}
-                                >
-                                    <View
-                                        style={{ flexShrink: 1, flexGrow: 1 }}
-                                    >
-                                        <Text ellipsizeMode="tail">
-                                            {center["Site Name"]}
-                                        </Text>
-                                        <Text ellipsizeMode="tail">
-                                            {center["Site Address"]}
-                                        </Text>
-                                    </View>
-
-                                    <Pressable
-                                        style={{
-                                            width: 24,
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            marginLeft: 6,
-                                        }}
-                                    >
-                                        <Ionicons
-                                            size={20}
-                                            name="arrow-forward"
-                                        />
-                                    </Pressable>
-                                </View>
-                            </Callout>
-                        </Marker>
-                    ))}
+                    {displayCenters.map((center) => <CenterMarker key={center["BPHC Assigned Number"]} center={center} />)}
                 </MapView>
 
                 <DraggableSearchBar

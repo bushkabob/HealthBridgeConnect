@@ -20,6 +20,8 @@ const CenterDetails = () => {
 
     const textColor = useThemeColor({}, "text");
     const backgroundColor = useThemeColor({}, "background");
+    const cardColor = useThemeColor({}, "card")
+    const cardColor2 = useThemeColor({}, "card1")
 
     const { query } = useDatabase();
 
@@ -60,11 +62,11 @@ const CenterDetails = () => {
                 </View>
             ) : (
                 <View style={styles.content}>
-                    <View style={styles.card}>
+                    <View style={[styles.card, { backgroundColor: cardColor }]}>
                         <Text style={[styles.title, { color: textColor }]}>{name}</Text>
                         <Text style={[styles.address, { color: textColor }]}>{address}</Text>
 
-                        <View style={styles.infoSection}>
+                        <View style={[styles.infoSection, {backgroundColor: cardColor2}]}>
                             <Text style={[styles.infoText, { color: textColor }]}>
                                 <Text style={styles.label}>Weekly Hours: </Text>
                                 {siteInfo["Operating Hours per Week"]}{" "}
@@ -162,7 +164,6 @@ const styles = StyleSheet.create({
     },
     card: {
         width: "100%",
-        backgroundColor: "white",
         borderRadius: 16,
         padding: 20,
         shadowColor: "#000",
@@ -183,7 +184,6 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     infoSection: {
-        backgroundColor: "rgba(240,240,240,0.8)",
         borderRadius: 12,
         padding: 12,
         marginBottom: 16,
