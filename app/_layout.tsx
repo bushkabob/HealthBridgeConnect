@@ -14,13 +14,15 @@ export default function TabLayout() {
 				/>
 				<Stack.Screen
 					name="details"
-					options={{ headerShown: true }}
+					options={{ headerTransparent: true, headerTitle: "", headerBackButtonDisplayMode: "minimal"}}
 				/>
 				<Stack.Screen
 					name="settings"
-					options={{ headerShown: true, title: "Settings" }}
+					options={{ title: "Settings", headerTransparent: true, headerTitle: "", headerBackButtonDisplayMode: "minimal"}}
 				/>
 			</Stack>
 		</ThemeProvider>
 	);
 }
+
+

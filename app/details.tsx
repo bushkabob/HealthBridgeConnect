@@ -1,6 +1,7 @@
 import { useThemeColor } from "@/hooks/use-theme-color";
 import useDatabase from "@/hooks/useDatabase";
 import { Ionicons } from "@expo/vector-icons";
+import { getDefaultHeaderHeight } from "@react-navigation/elements";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -8,15 +9,21 @@ import {
     Linking,
     Platform,
     Pressable,
+    ScrollView,
     StyleSheet,
     Text,
-    View,
+    View
 } from "react-native";
+import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context";
 import { FQHCSite } from "./types";
 
 const CenterDetails = () => {
     const { id, name } = useLocalSearchParams();
     const [siteInfo, setSiteInfo] = useState<FQHCSite | null>(null);
+
+    const frame = useSafeAreaFrame();
+    const insets = useSafeAreaInsets();
+    const headerHeight = getDefaultHeaderHeight(frame, false, insets.top);
 
     const textColor = useThemeColor({}, "text");
     const backgroundColor = useThemeColor({}, "background");
@@ -55,6 +62,8 @@ const CenterDetails = () => {
 
     return (
         <View style={[styles.container, { backgroundColor }]}>
+            <ScrollView style={{height: "100%", width: "100%", padding: 20}} contentContainerStyle={{height: "100%", width: "100%"}} >
+            <View style={{height: headerHeight, width: "100%"}} />
             <Stack.Screen options={{ title: name as string }} />
             {!siteInfo ? (
                 <View style={styles.loaderContainer}>
@@ -113,6 +122,7 @@ const CenterDetails = () => {
                     </View>
                 </View>
             )}
+            </ScrollView>
         </View>
     );
 };
@@ -151,7 +161,8 @@ const ActionButton = ({
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 20,
+        height: "100%",
+        width: "100%"
     },
     loaderContainer: {
         flex: 1,

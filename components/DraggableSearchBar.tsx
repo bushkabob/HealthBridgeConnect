@@ -47,7 +47,7 @@ const DraggableSearchBar: React.FC<Props> = ({
 }) => {
     const themeBack = useThemeColor({}, "background");
     const themeText = useThemeColor({}, "text");
-    const background2 = useThemeColor({}, "background2")
+    const background2 = useThemeColor({}, "background3")
 
     const { height } = Dimensions.get("window");
 

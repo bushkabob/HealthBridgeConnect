@@ -608,16 +608,16 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
 
                         !val.item.isCity
                             ? setTimeout(
-                                  () =>
-                                      props.markerRefs.current[
-                                          val.item.id
-                                      ].showCallout(),
-                                  1000
-                              )
+                                () =>
+                                    props.markerRefs.current[
+                                        val.item.id
+                                    ].showCallout(),
+                                1000
+                            )
                             : props.setCenter({
-                                  lat: val.item.lat,
-                                  lon: val.item.lon,
-                              });
+                                lat: val.item.lat,
+                                lon: val.item.lon,
+                            });
                     };
                     console.log(val.item);
                     return (

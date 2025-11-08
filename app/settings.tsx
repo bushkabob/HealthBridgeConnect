@@ -3,20 +3,33 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Slider from "@react-native-community/slider";
 import SegmentedControl from "@react-native-segmented-control/segmented-control";
+import { getDefaultHeaderHeight } from "@react-navigation/elements";
+import { useAssets } from "expo-asset";
+import { Image } from "expo-image";
 import { Link } from "expo-router";
 import { useLayoutEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+    useSafeAreaFrame,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const Settings = () => {
     const [unit, setUnit] = useState("Imperial");
     const [searchRadius, setSearchRadius] = useState(10);
+
+    const [assets, error] = useAssets(require("../assets/images/icon.png"))
+
+    const frame = useSafeAreaFrame();
+    const insets = useSafeAreaInsets();
+    const headerHeight = getDefaultHeaderHeight(frame, false, insets.top);
 
     const themeBack = useThemeColor({}, "background");
     const cardBack = useThemeColor({}, "card");
     const themeColor = useThemeColor({}, "text");
 
     const titleWeight = "bold";
-    const titleSize = 20;
+    const titleSize = 25;
 
     const getData = async () => {
         try {
@@ -56,102 +69,118 @@ const Settings = () => {
                 height: "100%",
             }}
         >
-            <ScrollView contentContainerStyle={{height: "100%", width: "100%"}} >
-                <View
-                    style={[
-                        {
-                            backgroundColor: cardBack,
-                        },
-                        styles.shadow,
-                    ]}
-                >
-                    <Text
-                        style={{
-                            color: themeColor,
-                            fontWeight: titleWeight,
-                            fontSize: titleSize,
-                        }}
+            <ScrollView
+                contentContainerStyle={{ height: "100%", width: "100%" }}
+            >
+                <View style={{ height: headerHeight, width: "100%" }}></View>
+                <View style={styles.contentView}>
+                    <View
+                        style={[
+                            {
+                                backgroundColor: cardBack,
+                            },
+                            styles.shadow,
+                        ]}
                     >
-                        Unit Type
-                    </Text>
-                    <SegmentedControl
-                        onChange={updateUnit}
-                        values={["Imperial", "Metric"]}
-                        selectedIndex={unit === "Metric" ? 1 : 0}
-                    />
-                </View>
-                <View
-                    style={[
-                        {
-                            backgroundColor: cardBack,
-                        },
-                        styles.shadow,
-                    ]}
-                >
-                    <Text
-                        style={{
-                            color: themeColor,
-                            fontWeight: titleWeight,
-                            fontSize: titleSize,
-                        }}
-                    >
-                        Search Radius
-                    </Text>
-                    <Text style={{ color: themeColor }}>
-                        {searchRadius.toFixed(0)}{" "}
-                        {unit === "Imperial" ? "mi" : "km"}
-                    </Text>
-                    <Slider
-                        minimumValue={1}
-                        maximumValue={30}
-                        style={{ marginHorizontal: 40 }}
-                        value={searchRadius}
-                        onValueChange={(val) => updateRadius(val)}
-                    />
-                </View>
-                <View style={[
-                        {
-                            backgroundColor: cardBack,
-                        },
-                        styles.shadow,
-                    ]}>
+                        <Image source={assets ? assets[0] : null} style={{height : 60, width: 60, borderRadius: 15}} />
                         <Text
-                        style={{
-                            color: themeColor,
-                            fontWeight: titleWeight,
-                            fontSize: titleSize,
-                        }}
+                            style={{
+                                color: themeColor,
+                                fontWeight: titleWeight,
+                                fontSize: titleSize,
+                            }}
+                        >
+                            About
+                        </Text>
+                        <Text style={{ color: themeColor }}>
+                            Distributed under the MIT License
+                        </Text>
+                    </View>
+                    <View
+                        style={[
+                            {
+                                backgroundColor: cardBack,
+                            },
+                            styles.shadow,
+                        ]}
                     >
-                        About
-                    </Text>
-                    <Text style={{ color: themeColor }}>
-                        Distributed under the MIT License
-                    </Text>
-                </View>
-                <View style={[
-                        {
-                            backgroundColor: cardBack,
-                        },
-                        styles.shadow,
-                    ]}>
                         <Text
-                        style={{
-                            color: themeColor,
-                            fontWeight: titleWeight,
-                            fontSize: titleSize,
-                        }}
+                            style={{
+                                color: themeColor,
+                                fontWeight: titleWeight,
+                                fontSize: titleSize,
+                            }}
+                        >
+                            Settings
+                        </Text>
+                        <Text style={{color: themeColor}}>Unit:</Text>
+                        <SegmentedControl
+                            onChange={updateUnit}
+                            values={["Imperial", "Metric"]}
+                            selectedIndex={unit === "Metric" ? 1 : 0}
+                        />
+                        <Text style={{ color: themeColor }}>
+                            Search Radius:
+                            {" "}{searchRadius.toFixed(0)}{" "}
+                            {unit === "Imperial" ? "mi" : "km"}
+                        </Text>
+                        <Slider
+                            minimumValue={1}
+                            maximumValue={30}
+                            style={{ marginHorizontal: 40 }}
+                            value={searchRadius}
+                            onValueChange={(val) => updateRadius(val)}
+                        />
+                    </View>
+                    <View
+                        style={[
+                            {
+                                backgroundColor: cardBack,
+                            },
+                            styles.shadow,
+                        ]}
                     >
-                        Acknowledgments
-                    </Text>
-                    <Text style={{ color: themeColor }}>
-                        Built on the <Link href={"https://expo.dev"} dataDetectorType={"link"} ><Ionicons name="link" /> Expo Platform</Link> 
-                    </Text>
-                    <Text style={{ color: themeColor }}>
-                        Data sourced from the Health Resource and Service Administration <Link href={"https://data.hrsa.gov/data/download"} dataDetectorType={"link"} ><Ionicons name="link" /> Data Warehouse</Link> 
-                    </Text>
-                    <Text style={{ color: themeColor }}>
-                        Medicare enrollment status provided by the Center for Medicare & Medicaid Services <Link href={"https://data.cms.gov/provider-characteristics/hospitals-and-other-facilities/federally-qualified-health-center-enrollments"} dataDetectorType={"link"} ><Ionicons name="link" /> Data Warehouse</Link> 
-                    </Text>
+                        <Text
+                            style={{
+                                color: themeColor,
+                                fontWeight: titleWeight,
+                                fontSize: titleSize,
+                            }}
+                        >
+                            Acknowledgments
+                        </Text>
+                        <Text style={{ color: themeColor }}>
+                            Built on the{" "}
+                            <Link
+                                href={"https://expo.dev"}
+                                dataDetectorType={"link"}
+                            >
+                                <Ionicons name="link" /> Expo Platform
+                            </Link>
+                        </Text>
+                        <Text style={{ color: themeColor }}>
+                            Data sourced from the Health Resource and Service
+                            Administration{" "}
+                            <Link
+                                href={"https://data.hrsa.gov/data/download"}
+                                dataDetectorType={"link"}
+                            >
+                                <Ionicons name="link" /> Data Warehouse
+                            </Link>
+                        </Text>
+                        <Text style={{ color: themeColor }}>
+                            Medicare enrollment status provided by the Center
+                            for Medicare & Medicaid Services{" "}
+                            <Link
+                                href={
+                                    "https://data.cms.gov/provider-characteristics/hospitals-and-other-facilities/federally-qualified-health-center-enrollments"
+                                }
+                                dataDetectorType={"link"}
+                            >
+                                <Ionicons name="link" /> Data Warehouse
+                            </Link>
+                        </Text>
+                    </View>
                 </View>
             </ScrollView>
         </View>
@@ -173,6 +202,9 @@ const styles = StyleSheet.create({
 
         elevation: 3,
         gap: 10,
+    },
+    contentView: {
+        marginTop: 30,
     },
 });
 
