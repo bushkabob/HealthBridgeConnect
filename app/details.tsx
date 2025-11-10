@@ -15,7 +15,7 @@ import {
     View
 } from "react-native";
 import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context";
-import { FQHCSite } from "./types";
+import { FQHCSite } from "../types/types";
 
 const CenterDetails = () => {
     const { id, name } = useLocalSearchParams();

@@ -12,10 +12,11 @@ let databaseInitPromise: Promise<SQLite.SQLiteDatabase> | undefined = undefined;
 const downloadDb = async (dbFile: File) => {
     try {
         // Load the DB asset
+        console.log("Loading DB")
         const asset = await Asset.loadAsync(
             require('../assets/database/'+DB_NAME)
         )
-
+        console.log(asset[0].localUri, asset[0].uri)
         const assetFile = new File(asset[0].localUri as string);
         await assetFile.copy(dbFile);
     } catch (error) {
@@ -38,10 +39,13 @@ async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
 
             // Copy DB if it doesn’t exist
             if (!dbFile.exists || dbFile.size === 0) {
+                console.log("Re-downloading DB")
+                console.log("DB Exists: ", dbFile.exists)
                 if(dbFile.exists) {
+                    console.log("Deleting Failed attempt")
                     dbFile.delete()
                 }
-                downloadDb(dbFile)
+                await downloadDb(dbFile)
             } else {
                 console.log("DB file already exists at", dbFile.uri);
             }
@@ -55,7 +59,7 @@ async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
             databaseInstance = db;
     
 
-            console.log("✅ Database initialized and ready");
+            console.log("✅ Database initialized and ready", dbFile.size);
             return db;
         } catch (error) {
             console.log("Error initializing DB:", error);

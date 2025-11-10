@@ -63,3 +63,7 @@ export interface City {
     lat: number,
     lon: number
 }
+
+export type HeightUpdateFunction = (height: number, delay?: number) => void
+
+export type MapCenter = { lat: number; lon: number } | undefined

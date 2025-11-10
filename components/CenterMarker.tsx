@@ -1,8 +1,8 @@
-import { FQHCSite } from "@/app/types";
 import { useThemeColor } from "@/hooks/use-theme-color";
+import { FQHCSite } from "@/types/types";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Pressable, Text, View } from "react-native";
+import { Platform, Pressable, Text, View } from "react-native";
 import { Callout, Marker } from "react-native-maps";
 
 interface CenterMarkerProps {
@@ -27,7 +27,7 @@ const CenterMarker = (props: CenterMarkerProps) => {
                         },
                     });
                 }}
-                tooltip
+                tooltip={Platform.OS !== "android"}
             >
                 <View
                     style={{

@@ -24,8 +24,13 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION"
-      ]
+      ],
+      "package": "com.jb16.fqhcsearch"
     },
     "web": {
       "output": "static",
@@ -53,11 +58,17 @@
         }
       ],
       "expo-sqlite",
-      ["expo-asset",
-      {
-        "assets": ["./assets/cities.json", "./assets/database/fqhc.db"]
-      }
-    ]
+      [
+        "expo-asset",
+        {
+          "assets": [
+            "./assets/cities.json",
+            "./assets/database/fqhc.db"
+          ]
+        }
+      ],
+      "expo-web-browser",
+      "expo-maps"
     ],
     "experiments": {
       "typedRoutes": true,

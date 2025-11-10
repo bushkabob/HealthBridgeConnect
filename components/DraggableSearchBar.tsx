@@ -48,6 +48,7 @@ const DraggableSearchBar: React.FC<Props> = ({
     const themeBack = useThemeColor({}, "background");
     const themeText = useThemeColor({}, "text");
     const background2 = useThemeColor({}, "background3")
+    const themeGray = useThemeColor({}, "tabIconDefault")
 
     const { height } = Dimensions.get("window");
 
@@ -247,7 +248,7 @@ const DraggableSearchBar: React.FC<Props> = ({
                 >   
                     <Animated.View
                             style={[
-                                isLiquidGlassAvailable() ? { borderRadius: 40, overflow: "hidden"} : { borderRadius: 40, overflow: "hidden", backgroundColor: themeBack},
+                                isLiquidGlassAvailable() ? { borderRadius: 40, overflow: "hidden"} : { borderRadius: 40, overflow: "hidden", backgroundColor: background2},
                                 styles.sheet,
                                 mask,
                             ]}
@@ -264,7 +265,7 @@ const DraggableSearchBar: React.FC<Props> = ({
                 >
                     <Animated.View
                         style={[
-                            isLiquidGlassAvailable() ? { borderRadius: 40, overflow: "hidden"} : { borderRadius: 40, overflow: "hidden", backgroundColor: themeBack},
+                            { borderRadius: 40, overflow: "hidden"},
                             styles.sheet,
                             mask,
                         ]}
@@ -295,7 +296,7 @@ const DraggableSearchBar: React.FC<Props> = ({
                                         experimentalBlurMethod="dimezisBlurView"
                                     />
                                 </Animated.View>
-                                <View style={styles.handle} />
+                                <View style={[styles.handle, {backgroundColor: themeGray}]} />
                                 {/* Search Row */}
                                 <View style={styles.row}>
                                     <Pressable
@@ -306,7 +307,7 @@ const DraggableSearchBar: React.FC<Props> = ({
                                     >
                                         <GlassView
                                             tintColor={themeBack}
-                                            style={styles.inputBox}
+                                            style={[styles.inputBox, {backgroundColor: isLiquidGlassAvailable() ? undefined : themeBack, boxShadow: isLiquidGlassAvailable() ? undefined : "0 4px 8px rgba(0, 0, 0, 0.1);"}]}
                                         >
                                             <Ionicons
                                                 name="search"
@@ -345,10 +346,10 @@ const DraggableSearchBar: React.FC<Props> = ({
                                             <GlassView
                                                 isInteractive
                                                 tintColor={themeBack}
-                                                style={{
+                                                style={[{
                                                     padding: 8,
                                                     borderRadius: 100,
-                                                }}
+                                                }, {backgroundColor: isLiquidGlassAvailable() ? undefined : themeBack, boxShadow: isLiquidGlassAvailable() ? undefined : "0 4px 8px rgba(0, 0, 0, 0.1);"}]}
                                             >
                                                 <Ionicons
                                                     name="close"
@@ -396,7 +397,6 @@ const styles = StyleSheet.create({
         width: 50,
         height: 4,
         borderRadius: 2,
-        backgroundColor: "rgba(255,255,255,0.5)",
         marginVertical: 8,
     },
 
