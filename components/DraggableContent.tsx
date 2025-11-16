@@ -1,39 +1,44 @@
 import { haversineDistance, levenshtein } from "@/app/utils";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import { City, FQHCSite, HeightUpdateFunction, MapCenter } from "@/types/types";
+import { City, FQHCSite, MapCenter } from "@/types/types";
 import { BlurView } from "expo-blur";
 import React, { RefObject, useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
+import { GestureDetector } from "react-native-gesture-handler";
 import MapView from "react-native-maps";
-import Animated, { Extrapolation, interpolate, runOnJS, useAnimatedProps, useAnimatedReaction } from "react-native-reanimated";
+import Animated, {
+    Extrapolation,
+    interpolate,
+    runOnJS,
+    useAnimatedProps,
+    useAnimatedReaction,
+} from "react-native-reanimated";
 import CenterInfoSearch from "./CenterInfoSearch";
 import { DraggableHandle } from "./FixedDraggable";
 import { useFixedDraggable } from "./FixedDraggableContext";
 import SearchRow from "./SearchRow";
 
 interface DraggableContentProps {
-    setViewHeight?: HeightUpdateFunction;
-    setDisplayCenters: Function
-    currentCenter: MapCenter
-    setSearchingCenters: Function
-    allCenters: FQHCSite[]
-    nearbyCenters: FQHCSite[]
-    displayCenters: FQHCSite[]
-    setCurrentCenter: Function
-    unit: string
-    searching: boolean
+    setDisplayCenters: Function;
+    currentCenter: MapCenter;
+    setSearchingCenters: Function;
+    allCenters: FQHCSite[];
+    nearbyCenters: FQHCSite[];
+    displayCenters: FQHCSite[];
+    setCurrentCenter: Function;
+    unit: string;
+    searching: boolean;
     //@ts-ignore
-    markerRefs: RefObject<Record<string, Marker | null>>
-    mapRef: RefObject<MapView | null>
+    markerRefs: RefObject<Record<string, Marker | null>>;
+    mapRef: RefObject<MapView | null>;
 }
 
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView)
-
+const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
 const DraggableContent = (props: DraggableContentProps) => {
     useEffect(() => {
-        console.log("remount content")
-    }, [])
+        console.log("remount content");
+    }, []);
 
     const [searchValue, setSearchValue] = useState("");
     const [displayCities, setDisplayCities] = useState<City[]>([]);
@@ -43,20 +48,25 @@ const DraggableContent = (props: DraggableContentProps) => {
         [key: string]: { lat: number; lon: number };
     }>({});
 
-    const headerHeight = 82
+    const headerHeight = 82;
 
-    const { progress, snapping, scrollY } = useFixedDraggable()
+    const { progress, snapping, scrollY, setViewHeight } = useFixedDraggable();
 
     const cancelActiveSearch = () => {
-        setSearchActive(false)
-    }
+        setSearchActive(false);
+    };
 
-    useAnimatedReaction(() => [progress, snapping], (curr, prev) => {
-        if (!prev) { return }
-        if(curr[1].value === false && (curr[0].value as number < 1)){
-            runOnJS(cancelActiveSearch)()
+    useAnimatedReaction(
+        () => [progress, snapping],
+        (curr, prev) => {
+            if (!prev) {
+                return;
+            }
+            if (curr[1].value === false && (curr[0].value as number) < 1) {
+                runOnJS(cancelActiveSearch)();
+            }
         }
-    })
+    );
 
     const searchCenters = (centerOptions: FQHCSite[]) => {
         props.setSearchingCenters(true);
@@ -89,7 +99,9 @@ const DraggableContent = (props: DraggableContentProps) => {
             } else {
                 props.setDisplayCenters(
                     searchCenters(
-                        searchArea === "Nearby" ? props.nearbyCenters : props.allCenters
+                        searchArea === "Nearby"
+                            ? props.nearbyCenters
+                            : props.allCenters
                     )
                 );
                 const lowerSearch = searchValue.toLowerCase();
@@ -216,34 +228,52 @@ const DraggableContent = (props: DraggableContentProps) => {
     // const derivedY = useDerivedValue(() => { return props.scrollY?.value })
 
     const animatedIntensity = useAnimatedProps(() => {
-        const intensity = interpolate(scrollY.value, [0, 150], [0, 100], Extrapolation.CLAMP)
-        return { intensity }
-    }, [scrollY.value])
+        const intensity = interpolate(
+            scrollY.value,
+            [0, 150],
+            [0, 100],
+            Extrapolation.CLAMP
+        );
+        return { intensity };
+    });
 
     return (
         <View style={{ width: "100%", height: "100%", borderRadius: 40 }}>
-            <AnimatedBlurView animatedProps={animatedIntensity} style={{ position: "absolute", top: 0, right: 0, left: 0, zIndex: 100, minHeight: headerHeight}} >
+            <AnimatedBlurView
+                animatedProps={animatedIntensity}
+                style={{
+                    position: "absolute",
+                    top: 0,
+                    right: 0,
+                    left: 0,
+                    zIndex: 100,
+                    minHeight: headerHeight,
+                }}
+                experimentalBlurMethod="dimezisBlurView"
+            >
                 <DraggableHandle />
                 <SearchRow
                     searchActive={searchActive}
                     setSearchActive={setSearchActive}
                     value={searchValue}
                     setValue={setSearchValue}
-                    setViewHeight={props.setViewHeight}
+                    setViewHeight={setViewHeight}
                     searchArea={searchArea}
                     setSearchArea={setSearchArea}
                 />
             </AnimatedBlurView>
-            <SearchResults 
-                searchingCenters={props.searching} 
-                unit={props.unit} 
-                displayCenters={props.displayCenters} 
-                cities={displayCities} 
-                markerRefs={props.markerRefs} 
-                mapRef={props.mapRef} 
+            <SearchResults
+                searchingCenters={props.searching}
+                unit={props.unit}
+                displayCenters={props.displayCenters}
+                cities={displayCities}
+                markerRefs={props.markerRefs}
+                mapRef={props.mapRef}
                 setCenter={props.setCurrentCenter}
                 headerHeight={searchActive ? headerHeight + 50 : headerHeight}
-                minimizeScroll={()=>{props.setViewHeight&&props.setViewHeight(0.0,300)}}
+                minimizeScroll={() => {
+                    setViewHeight(0.0, 300);
+                }}
             />
         </View>
     );
@@ -261,12 +291,13 @@ interface SearchResultsProps {
     markerRefs: any;
     mapRef: RefObject<MapView | null>;
     setCenter: Function;
-    headerHeight: number
+    headerHeight: number;
     minimizeScroll?: Function;
 }
 
 const SearchResults = React.memo((props: SearchResultsProps) => {
-    const { progress, snapping, scrollHandler } = useFixedDraggable()
+    const { progress, snapping, scrollHandler, gesture } = useFixedDraggable();
+    const [scrollEnabled, setScrollEnabled] = useState(false);
 
     const locales: {
         name: string;
@@ -301,28 +332,45 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
 
     const backgroundColor = useThemeColor({}, "background");
     const textColor = useThemeColor({}, "text");
-    const flatListRef = useRef<Animated.FlatList | null>(null)
+    const flatListRef = useRef<Animated.FlatList | null>(null);
 
     const scrollToTop = () => {
-        flatListRef.current!.scrollToOffset({ animated: true, offset: 0 })
-    }
+        flatListRef.current!.scrollToOffset({ animated: true, offset: 0 });
+    };
 
-    useAnimatedReaction(() => [progress, snapping], (curr, prev) => {
-        if (!prev) { return }
-        if(curr[1].value === false && (curr[0].value as number < 1 && (flatListRef))){
-            runOnJS(scrollToTop)()
+    useAnimatedReaction(
+        () => [progress, snapping],
+        (curr, prev) => {
+            if (!prev) {
+                return;
+            }
+            if (
+                curr[1].value === false &&
+                (curr[0].value as number) < 1 &&
+                flatListRef
+            ) {
+                runOnJS(scrollToTop)();
+            }
         }
-    })
+    );
+
+    useAnimatedReaction(
+        () => progress.value,
+        (p) => {
+            runOnJS(setScrollEnabled)(p === 1);
+        }
+    );
 
     return (
-        <>
+        <GestureDetector gesture={gesture}>
             <Animated.FlatList
                 ref={flatListRef}
                 contentContainerStyle={{
                     paddingBottom: 100,
-                    paddingTop: props.headerHeight
+                    paddingTop: props.headerHeight,
                 }}
-                scrollIndicatorInsets={{top: props.headerHeight}}
+                scrollEnabled={scrollEnabled}
+                scrollIndicatorInsets={{ top: props.headerHeight }}
                 showsVerticalScrollIndicator={!(Platform.OS === "android")}
                 data={locales}
                 removeClippedSubviews
@@ -393,8 +441,7 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
                         />
                     );
                 }}
-                
             />
-        </>
+        </GestureDetector>
     );
 });

@@ -2,10 +2,11 @@
 import { useThemeColor } from "@/hooks/use-theme-color";
 import Constants from "expo-constants";
 import { GlassView } from "expo-glass-effect";
-import React, { cloneElement, ReactElement } from "react";
+import React, { ReactElement } from "react";
 import {
     Dimensions,
     Keyboard,
+    Platform,
     StyleSheet,
     View
 } from "react-native";
@@ -49,11 +50,21 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (props: FixedDraggableProp
     const snapping = useSharedValue(false)
 
     const scrollY = useSharedValue(0)
-        
+    const scrolling = useSharedValue(false)
+
     const scrollHandler = useAnimatedScrollHandler({
+        onBeginDrag: () => {
+            scrolling.value = true
+            console.log("scroll")
+        },
         onScroll: (event) => {
+            console.log("scroll 2")
             scrollY.value = event.contentOffset.y
-        }
+        },
+        onEndDrag: () => {
+            scrolling.value = false
+            console.log("scroll 3")
+        },
     }, [])
 
     const dismissKeyboard = () => Keyboard.dismiss();
@@ -61,7 +72,7 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (props: FixedDraggableProp
     const updateHeight = (height: number, delay: number = 200) => {
         if(height > 1 || height < 0) { throw new Error("Height must be between [0, 1]") }
         const newYVal = (SNAP_BOTTOM - SNAP_TOP) * (1-height) + SNAP_TOP
-        translateY.value = withTiming(newYVal, { duration: delay })
+        translateY.value = withTiming(newYVal, { duration: delay }, cancelSnapping)
     }
 
     const cancelSnapping = () => {
@@ -69,25 +80,31 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (props: FixedDraggableProp
         snapping.value = false
     }
 
+    const native = Gesture.Native()
+
     //Gesture Handler
-    const pan = Gesture.Pan()
-        .onBegin(() => {snapping.value = true; runOnJS(dismissKeyboard)()})
+    const pan = Gesture.Pan().requireExternalGestureToFail(native)
+        .onBegin(() => {snapping.value = true; runOnJS(dismissKeyboard)(); console.log("pan")
+})
         .onChange((e) => {
+            if(scrolling.value === true && progress.value === 1 && scrollY.value > 0){return}
             const newY = translateY.value + e.changeY;
             translateY.value = Math.min(Math.max(newY, SNAP_TOP), SNAP_BOTTOM);
+            console.log("pan 2")
         })
         .onEnd((e) => {
-            if (Math.abs(e.velocityY) > 2500) {
-                const target = e.velocityY < 0 ? SNAP_TOP : SNAP_BOTTOM;
-                translateY.value = withTiming(target, { duration: 200 }, cancelSnapping);
-            } else {
+            // if (Math.abs(e.velocityY) > 2500) {
+            //     const target = e.velocityY < 0 ? SNAP_TOP : SNAP_BOTTOM;
+            //     translateY.value = withTiming(target, { duration: 200 }, cancelSnapping);
+            // } else {
                 const topBarrier = (SNAP_BOTTOM - SNAP_TOP) / 4;
                 const bottomBarrier = ((SNAP_BOTTOM - SNAP_TOP) * 3 / 4) + MIN_HEIGHT
                 const target =
                     translateY.value < topBarrier ? SNAP_TOP : translateY.value > bottomBarrier ? SNAP_BOTTOM : SNAP_MIDDLE;
                 translateY.value = withTiming(target, { duration: 200 }, cancelSnapping);
-            }
-    });
+                console.log("pan 3")
+            // }
+    })
 
     //Main sheet
     const sheetStyle = useAnimatedStyle(() => {
@@ -163,7 +180,7 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (props: FixedDraggableProp
 
     //Render
     return (
-        <FixedDraggableProvider value={{ progress, snapping, scrollY, scrollHandler }}>
+        <FixedDraggableProvider value={{ gesture: native, progress, snapping, scrollY, scrollHandler, setViewHeight: updateHeight }}>
             <Animated.View
                 style={[
                     {
@@ -185,11 +202,11 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (props: FixedDraggableProp
                         sheetStyle,
                     ]}
                 >
-                        <AnimatedGlassView style={[styles.background, glassViewFade]} />
+                        <AnimatedGlassView style={[styles.background, glassViewFade, { backgroundColor: Platform.OS === "android" ? background2 : undefined }]} />
                         <Animated.View style={[styles.background, backgroundViewFade, {backgroundColor: background2}]} />
                             <GestureDetector gesture={pan}>
                                 <View style={{width: "100%", height: "100%", alignItems: "center" }} >
-                                    {cloneElement(props.content as any, { setViewHeight: updateHeight, scrollY, scrollHandler })}
+                                    {props.content}
                                 </View>
                             </GestureDetector>
                 </Animated.View>

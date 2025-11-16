@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import SegmentedControl from "@react-native-segmented-control/segmented-control";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { useEffect, useRef } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 interface SearchRowProps {
     value: string;
@@ -129,12 +129,14 @@ const styles = StyleSheet.create({
     },
     search: {
         flex: 1,
-        paddingBottom: 20
+        paddingBottom: 20,
     },
     searchBar: {
         flexDirection: "row",
         borderRadius: 40,
-        padding: 10,
+        padding: Platform.OS === "android" ? 0 : 10,
+        alignItems: "center",
+        paddingHorizontal: 10
     },
     close: {
         padding: 10,

@@ -115,6 +115,7 @@ export default function Map() {
             const lat = location.coords.latitude;
             const lon = location.coords.longitude;
             setCurrentCenter({ lat: lat, lon: lon });
+            moveToLocation(location)
         });
     }, [allCenters]);
 
@@ -153,11 +154,6 @@ export default function Map() {
         const location = await Location.getCurrentPositionAsync({});
         callback && callback(location);
     }
-
-    //Calls function for user location on first load
-    useEffect(() => {
-        getCurrentLocation();
-    }, []);
 
     //Calls the function for loading user prefs
     useFocusEffect(() => {
