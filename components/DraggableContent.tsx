@@ -20,6 +20,7 @@ import SearchRow from "./SearchRow";
 
 interface DraggableContentProps {
     setDisplayCenters: Function;
+    setDetailCenter: Function;
     currentCenter: MapCenter;
     setSearchingCenters: Function;
     allCenters: FQHCSite[];
@@ -29,7 +30,7 @@ interface DraggableContentProps {
     unit: string;
     searching: boolean;
     //@ts-ignore
-    markerRefs: RefObject<Record<string, Marker | null>>;
+    // markerRefs: RefObject<Record<string, Marker | null>>;
     mapRef: RefObject<MapView | null>;
 }
 
@@ -263,11 +264,12 @@ const DraggableContent = (props: DraggableContentProps) => {
                 />
             </AnimatedBlurView>
             <SearchResults
+                setDetailCenter={props.setDetailCenter}
                 searchingCenters={props.searching}
                 unit={props.unit}
                 displayCenters={props.displayCenters}
                 cities={displayCities}
-                markerRefs={props.markerRefs}
+                // markerRefs={props.markerRefs}
                 mapRef={props.mapRef}
                 setCenter={props.setCurrentCenter}
                 headerHeight={searchActive ? headerHeight + 50 : headerHeight}
@@ -284,11 +286,12 @@ const styles = StyleSheet.create({});
 export default DraggableContent;
 
 interface SearchResultsProps {
+    setDetailCenter: Function;
     searchingCenters: boolean;
     unit: string;
     displayCenters: FQHCSite[];
     cities: City[];
-    markerRefs: any;
+    // markerRefs: any;
     mapRef: RefObject<MapView | null>;
     setCenter: Function;
     headerHeight: number;
@@ -416,13 +419,14 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
                         });
 
                         !val.item.isCity
-                            ? setTimeout(
+                            ? (setTimeout(
                                   () =>
-                                      props.markerRefs.current[
-                                          val.item.id
-                                      ].showCallout(),
-                                  1000
-                              )
+                                    props.setDetailCenter(
+                                        props.displayCenters.filter(
+                                            (center) => center["BPHC Assigned Number"] === val.item.id
+                                        )[0]
+                                    )
+                              ,1000))
                             : props.setCenter({
                                   lat: val.item.lat,
                                   lon: val.item.lon,

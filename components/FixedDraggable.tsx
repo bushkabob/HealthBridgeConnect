@@ -2,7 +2,7 @@
 import { useThemeColor } from "@/hooks/use-theme-color";
 import Constants from "expo-constants";
 import { GlassView } from "expo-glass-effect";
-import React, { ReactElement } from "react";
+import React, { ReactElement, RefObject, useImperativeHandle } from "react";
 import {
     Dimensions,
     Keyboard,
@@ -10,10 +10,7 @@ import {
     StyleSheet,
     View
 } from "react-native";
-import {
-    Gesture,
-    GestureDetector
-} from "react-native-gesture-handler";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
     Extrapolate,
     Extrapolation,
@@ -23,88 +20,140 @@ import Animated, {
     useAnimatedStyle,
     useDerivedValue,
     useSharedValue,
-    withTiming
+    withTiming,
 } from "react-native-reanimated";
 
 import { FixedDraggableProvider } from "./FixedDraggableContext";
 
-type FixedDraggableProps = {
-    content: ReactElement
-    header?: ReactElement
+export type FixedDraggableHandle = {
+    updateHeight: (height: number, delay: number) => void;
 };
 
-const FixedDraggable: React.FC<FixedDraggableProps> = (props: FixedDraggableProps) => {
-    const background2 = useThemeColor({}, "background3")
+type FixedDraggableProps = {
+    content: ReactElement;
+    header?: ReactElement;
+    defaultPosition?: number
+    ref?: RefObject<FixedDraggableHandle|undefined>
+};
 
-    const { height } = Dimensions.get("window");
+const { height } = Dimensions.get("window");
+const AnimatedGlassView = Animated.createAnimatedComponent(GlassView);
 
-    const MIN_HEIGHT = 82;
-    const MAX_HEIGHT = height - Constants.statusBarHeight;
-    const SNAP_TOP = 0 + Constants.statusBarHeight;
-    const BOTTOM_OFFSET = 15;
-    const SNAP_BOTTOM = height - MIN_HEIGHT - BOTTOM_OFFSET;
-    const SNAP_MIDDLE = (SNAP_TOP + SNAP_BOTTOM)/2
+export const MIN_HEIGHT = 82;
+export const MAX_HEIGHT = height - Constants.statusBarHeight;
+export const SNAP_TOP = 0 + Constants.statusBarHeight;
+export const BOTTOM_OFFSET = 15;
+export const SNAP_BOTTOM = height - MIN_HEIGHT - BOTTOM_OFFSET;
+export const SNAP_MIDDLE = (SNAP_TOP + SNAP_BOTTOM) / 2;
+export const SCALE_MIN = 0.9
+export const SCALE_MAX = 1.0 
+
+const FixedDraggable: React.FC<FixedDraggableProps> = (
+    props: FixedDraggableProps
+) => {
+    const background2 = useThemeColor({}, "background3");
+
+    if(props.defaultPosition && (props.defaultPosition > 1 || props.defaultPosition < 0)){ throw new Error("Default position must be between 0 and 1") }
 
     const translateY = useSharedValue(SNAP_BOTTOM);
-    const progress = useDerivedValue(() => 1 - (translateY.value - SNAP_TOP) / (SNAP_BOTTOM - SNAP_TOP))
-    const snapping = useSharedValue(false)
+    const progress = useDerivedValue(
+        () => 1 - (translateY.value - SNAP_TOP) / (SNAP_BOTTOM - SNAP_TOP)
+    );
+    const snapping = useSharedValue(false);
 
-    const scrollY = useSharedValue(0)
-    const scrolling = useSharedValue(false)
+    const scrollY = useSharedValue(0);
+    const scrolling = useSharedValue(false);
 
-    const scrollHandler = useAnimatedScrollHandler({
-        onBeginDrag: () => {
-            scrolling.value = true
-            console.log("scroll")
+    // console.log(SNAP_BOTTOM - SNAP_TOP / 2)
+
+
+    const scrollHandler = useAnimatedScrollHandler(
+        {
+            onBeginDrag: () => {
+                scrolling.value = true;
+                console.log("scroll");
+            },
+            onScroll: (event) => {
+                console.log("scroll 2");
+                scrollY.value = event.contentOffset.y;
+            },
+            onEndDrag: () => {
+                scrolling.value = false;
+                console.log("scroll 3");
+            },
         },
-        onScroll: (event) => {
-            console.log("scroll 2")
-            scrollY.value = event.contentOffset.y
-        },
-        onEndDrag: () => {
-            scrolling.value = false
-            console.log("scroll 3")
-        },
-    }, [])
+        []
+    );
 
     const dismissKeyboard = () => Keyboard.dismiss();
 
     const updateHeight = (height: number, delay: number = 200) => {
-        if(height > 1 || height < 0) { throw new Error("Height must be between [0, 1]") }
-        const newYVal = (SNAP_BOTTOM - SNAP_TOP) * (1-height) + SNAP_TOP
-        translateY.value = withTiming(newYVal, { duration: delay }, cancelSnapping)
-    }
+        if (height > 1 || height < 0) {
+            throw new Error("Height must be between [0, 1]");
+        }
+        const newYVal = (SNAP_BOTTOM - SNAP_TOP) * (1 - height) + SNAP_TOP;
+        translateY.value = withTiming(
+            newYVal,
+            { duration: delay },
+            cancelSnapping
+        );
+    };
+
+    useImperativeHandle(props.ref, () => {
+        return {
+            updateHeight
+        }
+    })
 
     const cancelSnapping = () => {
         "worklet";
-        snapping.value = false
-    }
+        snapping.value = false;
+    };
 
-    const native = Gesture.Native()
+    const native = Gesture.Native();
 
     //Gesture Handler
-    const pan = Gesture.Pan().requireExternalGestureToFail(native)
-        .onBegin(() => {snapping.value = true; runOnJS(dismissKeyboard)(); console.log("pan")
-})
+    const pan = Gesture.Pan()
+        .requireExternalGestureToFail(native)
+        .onBegin(() => {
+            snapping.value = true;
+            runOnJS(dismissKeyboard)();
+            console.log("pan");
+        })
         .onChange((e) => {
-            if(scrolling.value === true && progress.value === 1 && scrollY.value > 0){return}
+            if (
+                scrolling.value === true &&
+                progress.value === 1 &&
+                scrollY.value > 0
+            ) {
+                return;
+            }
             const newY = translateY.value + e.changeY;
             translateY.value = Math.min(Math.max(newY, SNAP_TOP), SNAP_BOTTOM);
-            console.log("pan 2")
+            console.log("pan 2");
         })
         .onEnd((e) => {
             // if (Math.abs(e.velocityY) > 2500) {
             //     const target = e.velocityY < 0 ? SNAP_TOP : SNAP_BOTTOM;
             //     translateY.value = withTiming(target, { duration: 200 }, cancelSnapping);
             // } else {
-                const topBarrier = (SNAP_BOTTOM - SNAP_TOP) / 4;
-                const bottomBarrier = ((SNAP_BOTTOM - SNAP_TOP) * 3 / 4) + MIN_HEIGHT
-                const target =
-                    translateY.value < topBarrier ? SNAP_TOP : translateY.value > bottomBarrier ? SNAP_BOTTOM : SNAP_MIDDLE;
-                translateY.value = withTiming(target, { duration: 200 }, cancelSnapping);
-                console.log("pan 3")
+            const topBarrier = (SNAP_BOTTOM - SNAP_TOP) / 4;
+            const bottomBarrier =
+                ((SNAP_BOTTOM - SNAP_TOP) * 3) / 4 + MIN_HEIGHT;
+            const target =
+                translateY.value < topBarrier
+                    ? SNAP_TOP
+                    : translateY.value > bottomBarrier
+                    ? SNAP_BOTTOM
+                    : SNAP_MIDDLE;
+            translateY.value = withTiming(
+                target,
+                { duration: 200 },
+                cancelSnapping
+            );
+            console.log("pan 3");
             // }
-    })
+        });
 
     //Main sheet
     const sheetStyle = useAnimatedStyle(() => {
@@ -112,18 +161,22 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (props: FixedDraggableProp
         const scale = interpolate(
             progress.value,
             [0, 1],
-            [0.90, 1],
+            [SCALE_MIN, SCALE_MAX],
             Extrapolate.CLAMP
         );
+
+        //Move view
         const translateYInter = translateY.value;
 
+        //Expand radi in case screen is square
         const radius = interpolate(
             progress.value,
-            [0.7,1],
+            [0.7, 1],
             [40, 0],
             Extrapolation.CLAMP
-        )
+        );
 
+        //Expand height
         const height = interpolate(
             progress.value,
             [0, 1],
@@ -131,17 +184,19 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (props: FixedDraggableProp
             Extrapolation.CLAMP
         );
 
+        console.log(height)
+
         return {
             transformOrigin: "bottom",
             transform: [{ translateY: translateYInter }, { scale: scale }],
             borderBottomLeftRadius: radius,
             borderBottomRightRadius: radius,
-            height
+            height,
         };
     });
 
     //Function buttons
-    const childFade = useAnimatedStyle(() => {            
+    const childFade = useAnimatedStyle(() => {
         const opacity = interpolate(
             translateY.value,
             [SNAP_BOTTOM * 0.5, SNAP_BOTTOM * 0.3],
@@ -163,24 +218,43 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (props: FixedDraggableProp
     });
 
     const glassViewFade = useAnimatedStyle(() => {
-        const opacity = interpolate(progress.value, [0.9, 1], [1, 0], Extrapolation.CLAMP)
+        const opacity = interpolate(
+            progress.value,
+            [0.9, 1],
+            [1, 0],
+            Extrapolation.CLAMP
+        );
         return {
-            opacity: opacity
-        }
-    })
+            opacity: opacity,
+        };
+    });
 
     const backgroundViewFade = useAnimatedStyle(() => {
-        const opacity = interpolate(progress.value, [0.5, 0.9], [0, 1], Extrapolation.CLAMP)
+        const opacity = interpolate(
+            progress.value,
+            [0.5, 0.9],
+            [0, 1],
+            Extrapolation.CLAMP
+        );
         return {
-            opacity: opacity
-        }
-    })
-
-    const AnimatedGlassView = Animated.createAnimatedComponent(GlassView)
+            opacity: opacity,
+        };
+    });
 
     //Render
     return (
-        <FixedDraggableProvider value={{ gesture: native, progress, snapping, scrollY, scrollHandler, setViewHeight: updateHeight }}>
+        //Provider
+        <FixedDraggableProvider
+            value={{
+                gesture: native,
+                progress,
+                snapping,
+                scrollY,
+                scrollHandler,
+                setViewHeight: updateHeight,
+            }}
+        >   
+            {/*Header*/}
             <Animated.View
                 style={[
                     {
@@ -194,34 +268,53 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (props: FixedDraggableProp
             >
                 {props.header}
             </Animated.View>
-            {/* Floating controls / children */}
+            {/*Combo mask*/}
+            <Animated.View
+                style={[styles.sheet, { height: MAX_HEIGHT }, sheetStyle]}
+            >
+                <AnimatedGlassView
+                    style={[
+                        styles.background,
+                        glassViewFade,
+                        {
+                            backgroundColor:
+                                Platform.OS === "android"
+                                    ? background2
+                                    : undefined,
+                        },
+                    ]}
+                />
                 <Animated.View
                     style={[
-                        styles.sheet,
-                        { height: MAX_HEIGHT },
-                        sheetStyle,
+                        styles.background,
+                        backgroundViewFade,
+                        { backgroundColor: background2 },
                     ]}
-                >
-                        <AnimatedGlassView style={[styles.background, glassViewFade, { backgroundColor: Platform.OS === "android" ? background2 : undefined }]} />
-                        <Animated.View style={[styles.background, backgroundViewFade, {backgroundColor: background2}]} />
-                            <GestureDetector gesture={pan}>
-                                <View style={{width: "100%", height: "100%", alignItems: "center" }} >
-                                    {props.content}
-                                </View>
-                            </GestureDetector>
-                </Animated.View>
+                />
+                <GestureDetector gesture={pan}>
+                    <View
+                        style={{
+                            width: "100%",
+                            height: "100%",
+                            alignItems: "center",
+                        }}
+                    >
+                        {props.content}
+                    </View>
+                </GestureDetector>
+            </Animated.View>
         </FixedDraggableProvider>
     );
 };
 
 export const DraggableHandle = () => {
-    const themeGray = useThemeColor({}, "tabIconDefault")
+    const themeGray = useThemeColor({}, "tabIconDefault");
     return (
-        <View style={{width: "100%", alignItems: "center"}} >
-            <View style={[styles.handle, {backgroundColor: themeGray}]} />
+        <View style={{ width: "100%", alignItems: "center" }}>
+            <View style={[styles.handle, { backgroundColor: themeGray }]} />
         </View>
-    )
-}
+    );
+};
 
 const styles = StyleSheet.create({
     sheet: {
@@ -230,7 +323,7 @@ const styles = StyleSheet.create({
         left: 0,
         zIndex: 100,
         borderRadius: 40,
-        overflow: "hidden"
+        overflow: "hidden",
     },
     background: {
         position: "absolute",

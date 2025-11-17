@@ -1,13 +1,12 @@
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { FQHCSite } from "@/types/types";
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Platform, Pressable, Text, View } from "react-native";
-import { Callout, Marker } from "react-native-maps";
+import { Marker } from "react-native-maps";
 
 interface CenterMarkerProps {
     center: FQHCSite;
     refFunc: any
+    onPress: Function
 }
 
 const CenterMarker = (props: CenterMarkerProps) => {
@@ -15,9 +14,11 @@ const CenterMarker = (props: CenterMarkerProps) => {
     const textColor = useThemeColor({}, "text");
     const router = useRouter();
 
+    console.log(props.onPress)
+
     return (
-        <Marker ref={(ref) => {props.refFunc(ref)}} coordinate={{ latitude: Number(props.center["Geocoding Artifact Address Primary Y Coordinate"]), longitude: Number(props.center["Geocoding Artifact Address Primary X Coordinate"]) }} >
-            <Callout
+        <Marker onPress={(e)=>{props.onPress(); e.stopPropagation()}} ref={(ref) => {props.refFunc(ref)}} coordinate={{ latitude: Number(props.center["Geocoding Artifact Address Primary Y Coordinate"]), longitude: Number(props.center["Geocoding Artifact Address Primary X Coordinate"]) }} >
+            {/* <Callout
                 onPress={() => {
                     router.push({
                         pathname: "/details",
@@ -91,7 +92,7 @@ const CenterMarker = (props: CenterMarkerProps) => {
                         </Pressable>
                     </View>
                 </View>
-            </Callout>
+            </Callout> */}
         </Marker>
     );
 };

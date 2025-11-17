@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { GlassView } from "expo-glass-effect";
-import { useRouter } from "expo-router";
 import React from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, {
@@ -28,7 +27,6 @@ function SiteCard({
     onClick,
     showCityIcon,
 }: CenterInfoSearchProps) {
-    const router = useRouter();
     const scale = useSharedValue(1);
 
     const animatedStyle = useAnimatedStyle(() => ({
