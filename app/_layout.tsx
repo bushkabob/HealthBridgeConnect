@@ -12,10 +12,10 @@ export default function TabLayout() {
 					name="index"
 					options={{ headerShown: false, title: "Home" }}
 				/>
-				<Stack.Screen
+				{/* <Stack.Screen
 					name="details"
 					options={{ headerTransparent: true, headerTitle: "", headerBackButtonDisplayMode: "minimal"}}
-				/>
+				/> */}
 				<Stack.Screen
 					name="settings"
 					options={{ title: "Settings", headerTransparent: true, headerTitle: "", headerBackButtonDisplayMode: "minimal"}}

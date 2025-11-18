@@ -14,8 +14,6 @@ const CenterMarker = (props: CenterMarkerProps) => {
     const textColor = useThemeColor({}, "text");
     const router = useRouter();
 
-    console.log(props.onPress)
-
     return (
         <Marker onPress={(e)=>{props.onPress(); e.stopPropagation()}} ref={(ref) => {props.refFunc(ref)}} coordinate={{ latitude: Number(props.center["Geocoding Artifact Address Primary Y Coordinate"]), longitude: Number(props.center["Geocoding Artifact Address Primary X Coordinate"]) }} >
             {/* <Callout

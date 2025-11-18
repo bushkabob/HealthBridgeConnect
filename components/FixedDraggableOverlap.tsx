@@ -1,4 +1,5 @@
-import { ReactElement, RefObject, useImperativeHandle, useRef } from "react";
+import MaskedView from "@react-native-masked-view/masked-view";
+import React, { ReactElement, RefObject, useImperativeHandle, useRef } from "react";
 import { Dimensions, StyleSheet, View } from "react-native";
 import Animated, {
     runOnJS,
@@ -19,6 +20,8 @@ interface ClippedDraggablesProps {
     topHeader?: ReactElement;
     ref: RefObject<ClippedDraggablesHandle | undefined>;
 }
+
+export const HIDE_OVERLAY_DELAY = 600
 
 export type ClippedDraggablesHandle = {
     open: () => void;
@@ -50,11 +53,11 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
 
     useImperativeHandle(props.ref, () => ({
         open: () => {
-            detailSheetY.value = withTiming(0, { duration: 350 });
+            detailSheetY.value = withTiming(0, { duration: HIDE_OVERLAY_DELAY });
         },
         close: () => {
             detailSheetY.value = withTiming(defaultTopBottomSheetOffset, {
-                duration: 350,
+                duration: HIDE_OVERLAY_DELAY,
             }, () => runOnJS(callUpdateHeight)());
         },
     }));
@@ -87,11 +90,44 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
                 style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}
                 pointerEvents="none"
             ></View>
-            {/* <MaskedView
+            <MaskedView
                 style={[StyleSheet.absoluteFill]}
                 pointerEvents="box-none"
                 maskElement={
-                    <Animated.View style={maskStyle}>
+                    <View style={[StyleSheet.absoluteFill]} ></View>
+                }
+            >
+                {/*Search Draggable*/}
+                <FixedDraggable
+                    content={props.clippedContent}
+                    header={props.clippedHeader}
+                />
+            </MaskedView>
+            <Animated.View
+                pointerEvents={"box-none"}
+                style={[
+                    {
+                        width: "100%",
+                        height: "100%",
+                        position: "absolute",
+                        zIndex: 999,
+                    },
+                    bottomSheetStyle,
+                ]}
+            >
+                {/*Detail Draggable*/}
+                <FixedDraggable
+                    content={props.topContent}
+                    header={props.topHeader}
+                    ref={topDraggableRef}
+                    defaultPosition={0.5}
+                />
+            </Animated.View>
+        </View>
+    );
+};
+
+{/* <Animated.View style={maskStyle}>
                         <View
                             style={{
                                 height: height,
@@ -139,35 +175,6 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
                                 mask="url(#mask)"
                             />
                         </AnimatedSvg>
-                    </Animated.View>
-                }
-            > */}
-                <FixedDraggable
-                    content={props.clippedContent}
-                    header={props.clippedHeader}
-                />
-            {/* </MaskedView> */}
-            <Animated.View
-                pointerEvents={"box-none"}
-                style={[
-                    {
-                        width: "100%",
-                        height: "100%",
-                        position: "absolute",
-                        zIndex: 999,
-                    },
-                    bottomSheetStyle,
-                ]}
-            >
-                <FixedDraggable
-                    content={props.topContent}
-                    header={props.topHeader}
-                    ref={topDraggableRef}
-                    defaultPosition={0.5}
-                />
-            </Animated.View>
-        </View>
-    );
-};
+                    </Animated.View> */}
 
 export default ClippedDraggables;

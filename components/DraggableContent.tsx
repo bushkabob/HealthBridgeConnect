@@ -1,7 +1,6 @@
-import { haversineDistance, levenshtein } from "@/app/utils";
+import { AnimatedBlurView, haversineDistance, levenshtein } from "@/app/utils";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { City, FQHCSite, MapCenter } from "@/types/types";
-import { BlurView } from "expo-blur";
 import React, { RefObject, useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
@@ -14,7 +13,7 @@ import Animated, {
     useAnimatedReaction,
 } from "react-native-reanimated";
 import CenterInfoSearch from "./CenterInfoSearch";
-import { DraggableHandle } from "./FixedDraggable";
+import { DraggableHandle, MIN_HEIGHT } from "./FixedDraggable";
 import { useFixedDraggable } from "./FixedDraggableContext";
 import SearchRow from "./SearchRow";
 
@@ -34,8 +33,6 @@ interface DraggableContentProps {
     mapRef: RefObject<MapView | null>;
 }
 
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
-
 const DraggableContent = (props: DraggableContentProps) => {
     useEffect(() => {
         console.log("remount content");
@@ -49,7 +46,7 @@ const DraggableContent = (props: DraggableContentProps) => {
         [key: string]: { lat: number; lon: number };
     }>({});
 
-    const headerHeight = 82;
+    const headerHeight = MIN_HEIGHT;
 
     const { progress, snapping, scrollY, setViewHeight } = useFixedDraggable();
 

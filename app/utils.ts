@@ -1,3 +1,6 @@
+import { BlurView } from "expo-blur";
+import Animated from "react-native-reanimated";
+
 export function levenshtein(a: string, b: string): number {
     if (a === b) return 0;
     if (a.length === 0) return b.length;
@@ -36,3 +39,5 @@ export function haversineDistance(
         Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(a));
 }
+
+export const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);

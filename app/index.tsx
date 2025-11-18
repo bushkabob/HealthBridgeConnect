@@ -1,13 +1,17 @@
+import CenterDetails from "@/components/CenterDetails";
 import CenterMarker from "@/components/CenterMarker";
 import DraggableContent from "@/components/DraggableContent";
 import DraggableHeader from "@/components/DraggableHeader";
-import ClippedDraggables, { ClippedDraggablesHandle } from "@/components/FixedDraggableOverlap";
+import ClippedDraggables, {
+    ClippedDraggablesHandle,
+    HIDE_OVERLAY_DELAY,
+} from "@/components/FixedDraggableOverlap";
 import useDatabase from "@/hooks/useDatabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, Text, View } from "react-native";
+import { Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { MapMarker } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,7 +25,7 @@ export default function Map() {
     const [nearbyCenters, setNearbyCenters] = useState<FQHCSite[]>([]);
     const [displayCenters, setDisplayCenters] = useState<FQHCSite[]>([]);
     const [currentCenter, setCurrentCenter] = useState<MapCenter>(undefined);
-    const [detailCenter, setDetailCenter] = useState<FQHCSite>()
+    const [detailCenter, setDetailCenter] = useState<FQHCSite>();
 
     const [searchRadius, setSearchRadius] = useState<number>(10);
     const [unit, setUnit] = useState<string>("Imperial");
@@ -102,18 +106,23 @@ export default function Map() {
 
     //Show callout when detailCenter is set
     useEffect(() => {
-        console.log(detailCenter)
-        if(detailCenter != undefined){
-            (markerRefs.current[detailCenter["BPHC Assigned Number"]] as MapMarker).showCallout()
+        console.log(detailCenter);
+        if (detailCenter != undefined) {
+            (
+                markerRefs.current[
+                    detailCenter["BPHC Assigned Number"]
+                ] as MapMarker
+            ).showCallout();
         }
-        if(detailCenter !== undefined && draggableOverlapImperatives.current !== undefined) {
-            console.log("opening")
-            draggableOverlapImperatives.current.open()
+        if (
+            detailCenter !== undefined &&
+            draggableOverlapImperatives.current !== undefined
+        ) {
+            draggableOverlapImperatives.current.open();
         } else if (draggableOverlapImperatives.current !== undefined) {
-            console.log("closing")
-            draggableOverlapImperatives.current.close()
+            draggableOverlapImperatives.current.close();
         }
-    }, [detailCenter])
+    }, [detailCenter]);
 
     //Search when unit, map center, or search radius changes
     useEffect(() => {
@@ -133,7 +142,7 @@ export default function Map() {
             const lat = location.coords.latitude;
             const lon = location.coords.longitude;
             setCurrentCenter({ lat: lat, lon: lon });
-            moveToLocation(location)
+            moveToLocation(location);
         });
     }, [allCenters]);
 
@@ -219,7 +228,8 @@ export default function Map() {
 
     const safeAreaInsets = useSafeAreaInsets();
 
-    const draggableOverlapImperatives = useRef<ClippedDraggablesHandle>(undefined)
+    const draggableOverlapImperatives =
+        useRef<ClippedDraggablesHandle>(undefined);
 
     return (
         <View
@@ -239,7 +249,9 @@ export default function Map() {
                     onPanDrag={() => {
                         locationColor !== "gray" && setLocationColor("gray");
                     }}
-                    onPress={()=>{setDetailCenter(undefined)}}
+                    onPress={() => {
+                        setDetailCenter(undefined);
+                    }}
                     mapPadding={
                         Platform.OS === "android"
                             ? {
@@ -262,10 +274,12 @@ export default function Map() {
                 >
                     {displayCenters.map((center) => (
                         <CenterMarker
-                            onPress={()=>setDetailCenter(center)}
+                            onPress={() => setDetailCenter(center)}
                             key={center["BPHC Assigned Number"]}
                             center={center}
-                            refFunc={createMarkerRef(center["BPHC Assigned Number"])}
+                            refFunc={createMarkerRef(
+                                center["BPHC Assigned Number"]
+                            )}
                         />
                     ))}
                 </MapView>
@@ -296,11 +310,26 @@ export default function Map() {
                             mapRef={mapRef}
                         />
                     }
-                    topContent={<View><Text>Test</Text></View>}
+                    topContent={
+                        detailCenter ? 
+                        <CenterDetails
+                            close={
+                                draggableOverlapImperatives.current
+                                    ? () => {
+                                        (markerRefs.current[detailCenter["BPHC Assigned Number"]] as MapMarker).hideCallout();
+                                        draggableOverlapImperatives.current && draggableOverlapImperatives.current.close();
+                                        setTimeout(() => setDetailCenter(undefined), HIDE_OVERLAY_DELAY)
+                                    }
+                                    : () => {}
+                            }
+                            center={detailCenter}
+                        />
+                        :
+                        <></>
+                    }
                     ref={draggableOverlapImperatives}
                 />
                 {/*Cover whole screen, always be on top, but let touches through*/}
-                
             </GestureHandlerRootView>
         </View>
     );
