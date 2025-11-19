@@ -16,6 +16,7 @@ import Animated, {
     Extrapolation,
     interpolate,
     runOnJS,
+    SharedValue,
     useAnimatedScrollHandler,
     useAnimatedStyle,
     useDerivedValue,
@@ -27,6 +28,10 @@ import { FixedDraggableProvider } from "./FixedDraggableContext";
 
 export type FixedDraggableHandle = {
     updateHeight: (height: number, delay: number) => void;
+    translateY: SharedValue<number>
+    scale: SharedValue<number>
+    radius: SharedValue<number>
+    height: SharedValue<number>
 };
 
 type FixedDraggableProps = {
@@ -59,27 +64,51 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (
     const progress = useDerivedValue(
         () => 1 - (translateY.value - SNAP_TOP) / (SNAP_BOTTOM - SNAP_TOP)
     );
+    const scale = useDerivedValue(() => {
+        const scale = interpolate(
+            progress.value,
+            [0, 1],
+            [SCALE_MIN, SCALE_MAX],
+            Extrapolate.CLAMP
+        );
+        return scale
+    })
+
+    const derivedHeight = useDerivedValue(() => {
+        const height = interpolate(
+            progress.value,
+            [0, 1],
+            [MIN_HEIGHT, MAX_HEIGHT],
+            Extrapolation.CLAMP
+        );
+        return height
+    })
+
+    const radius = useDerivedValue(() => {
+        const radius = interpolate(
+            progress.value,
+            [0.7, 1],
+            [40, 0],
+            Extrapolation.CLAMP
+        );
+        return radius
+    })
+
     const snapping = useSharedValue(false);
 
     const scrollY = useSharedValue(0);
     const scrolling = useSharedValue(false);
 
-    // console.log(SNAP_BOTTOM - SNAP_TOP / 2)
-
-
     const scrollHandler = useAnimatedScrollHandler(
         {
             onBeginDrag: () => {
                 scrolling.value = true;
-                console.log("scroll");
             },
             onScroll: (event) => {
-                console.log("scroll 2");
                 scrollY.value = event.contentOffset.y;
             },
             onEndDrag: () => {
                 scrolling.value = false;
-                console.log("scroll 3");
             },
         },
         []
@@ -101,7 +130,11 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (
 
     useImperativeHandle(props.ref, () => {
         return {
-            updateHeight
+            updateHeight,
+            translateY,
+            scale,
+            height: derivedHeight,
+            radius
         }
     })
 
@@ -118,7 +151,6 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (
         .onBegin(() => {
             snapping.value = true;
             runOnJS(dismissKeyboard)();
-            console.log("pan");
         })
         .onChange((e) => {
             if (
@@ -130,7 +162,6 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (
             }
             const newY = translateY.value + e.changeY;
             translateY.value = Math.min(Math.max(newY, SNAP_TOP), SNAP_BOTTOM);
-            console.log("pan 2");
         })
         .onEnd((e) => {
             // if (Math.abs(e.velocityY) > 2500) {
@@ -151,47 +182,18 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (
                 { duration: 200 },
                 cancelSnapping
             );
-            console.log("pan 3");
             // }
         });
 
     //Main sheet
     const sheetStyle = useAnimatedStyle(() => {
-        // progress: 0 = closed, 1 = fully open
-        const scale = interpolate(
-            progress.value,
-            [0, 1],
-            [SCALE_MIN, SCALE_MAX],
-            Extrapolate.CLAMP
-        );
-
-        //Move view
-        const translateYInter = translateY.value;
-
         //Expand radi in case screen is square
-        const radius = interpolate(
-            progress.value,
-            [0.7, 1],
-            [40, 0],
-            Extrapolation.CLAMP
-        );
-
-        //Expand height
-        const height = interpolate(
-            progress.value,
-            [0, 1],
-            [MIN_HEIGHT, MAX_HEIGHT],
-            Extrapolation.CLAMP
-        );
-
-        console.log(height)
-
         return {
             transformOrigin: "bottom",
-            transform: [{ translateY: translateYInter }, { scale: scale }],
-            borderBottomLeftRadius: radius,
-            borderBottomRightRadius: radius,
-            height,
+            transform: [{ translateY: translateY.value }, { scale: scale.value }],
+            borderBottomLeftRadius: radius.value,
+            borderBottomRightRadius: radius.value,
+            height: derivedHeight.value,
         };
     });
 
