@@ -32,6 +32,8 @@ export type FixedDraggableHandle = {
     scale: SharedValue<number>
     radius: SharedValue<number>
     height: SharedValue<number>
+    progress: SharedValue<number>
+    // updateTranslateY_INTERNAL_USE_ONLY: (value: number) => void
 };
 
 type FixedDraggableProps = {
@@ -128,13 +130,24 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (
         );
     };
 
+    const updateTranslateY_INTERNAL_USE_ONLY = (value: number) => {
+        "worklet";
+        if(Math.abs(translateY.value - value) > 100) {
+
+        } else {
+            translateY.value = value
+        }
+    }
+
     useImperativeHandle(props.ref, () => {
         return {
             updateHeight,
+            // updateTranslateY_INTERNAL_USE_ONLY,
             translateY,
             scale,
             height: derivedHeight,
-            radius
+            radius,
+            progress
         }
     })
 

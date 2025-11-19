@@ -26,7 +26,7 @@ const DraggableHeader = (props: DraggableHeaderProps) => {
                     gap: 20,
                 },
                 isLiquidGlassAvailable()
-                    ? {}
+                    ? { }
                     : { backgroundColor: backgroundColor },
             ]}
         >

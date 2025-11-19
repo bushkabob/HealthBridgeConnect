@@ -1,4 +1,10 @@
-import { Canvas, RoundedRect } from "@shopify/react-native-skia";
+import {
+    Canvas,
+    Group,
+    Mask,
+    Rect,
+    RoundedRect,
+} from "@shopify/react-native-skia";
 import React, {
     ReactElement,
     RefObject,
@@ -7,6 +13,8 @@ import React, {
 } from "react";
 import { Dimensions, StyleSheet, View } from "react-native";
 import Animated, {
+    Extrapolate,
+    interpolate,
     runOnJS,
     useAnimatedStyle,
     useDerivedValue,
@@ -14,15 +22,17 @@ import Animated, {
     withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import FixedDraggable, { FixedDraggableHandle } from "./FixedDraggable";
+import FixedDraggable, { BOTTOM_OFFSET, FixedDraggableHandle } from "./FixedDraggable";
 
 interface ClippedDraggablesProps {
     clippedContent: ReactElement;
-    clippedHeader?: ReactElement;
+    header?: ReactElement;
     topContent: ReactElement;
-    topHeader?: ReactElement;
     ref: RefObject<ClippedDraggablesHandle | undefined>;
 }
+
+import MaskedView from "@react-native-masked-view/masked-view";
+import { isLiquidGlassAvailable } from "expo-glass-effect";
 
 export const HIDE_OVERLAY_DELAY = 600;
 
@@ -47,12 +57,13 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
     });
 
     const topDraggableRef = useRef<FixedDraggableHandle>(undefined);
+    const bottomDraggableRef = useRef<FixedDraggableHandle>(undefined);
 
     const callUpdateHeight = () => {
         topDraggableRef.current?.updateHeight(0.5, 1);
     };
 
-    // Pull values from FixedDraggable
+    // Pull values from FixedDraggable Top
     const translateY = useDerivedValue(() => {
         return topDraggableRef.current?.translateY.value ?? 0;
     });
@@ -66,6 +77,9 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
     });
 
     const draggableHeight = useDerivedValue(() => {
+        // if(bottomDraggableRef.current !== undefined && topDraggableRef.current !== undefined && detailSheetY.value === 0) {
+        //     bottomDraggableRef.current.updateTranslateY_INTERNAL_USE_ONLY(topDraggableRef.current.translateY.value)
+        // }
         return topDraggableRef.current?.height.value ?? 0;
     });
 
@@ -88,6 +102,28 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
 
     const transformOrigin = useDerivedValue(() => {
         return { x: width / 2, y: transformOriginY.value };
+    });
+
+    const childFade = useAnimatedStyle(() => {
+        const progress = (topDraggableRef.current && bottomDraggableRef.current) ? Math.max(topDraggableRef.current.progress.value, bottomDraggableRef.current.progress.value) : 0
+        const opacity = interpolate(
+            progress,
+            [0.7, 0.8],
+            [1, 0],
+            Extrapolate.CLAMP
+        );
+        const scale = interpolate(
+            progress,
+            [0, 1],
+            [0.94, 1],
+            Extrapolate.CLAMP
+        );
+        const translateYInter = Math.min(translateY.value + detailSheetY.value, bottomDraggableRef.current ? bottomDraggableRef.current.translateY.value : translateY.value + detailSheetY.value) - BOTTOM_OFFSET - 130;
+        return {
+            transform: [{ translateY: translateYInter }, { scale: scale }],
+            opacity: opacity,
+            transformOrigin: "top",
+        };
     });
 
     useImperativeHandle(props.ref, () => ({
@@ -117,29 +153,110 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
                 left: 0,
             }}
         >
-            <Canvas
-                style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}
-                pointerEvents="none"
-            >
-                <RoundedRect
-                    x={0}
-                    y={0}
-                    origin={transformOrigin}
-                    width={width}
-                    height={draggableHeight}
-                    r={radius}
-                    color="rgba(255,0,0,0.3)"
-                    transform={transform}
-                />
-                {/* </Animated.View> */}
-            </Canvas>
-
+            {/* <Canvas
+                            style={[StyleSheet.absoluteFill, { zIndex: 1000 }]}
+                            pointerEvents="none"
+                        >
+                            <Mask
+                                mode="luminance"
+                                mask={
+                                    <Group>
+                                        <Rect
+                                            x={0}
+                                            y={0}
+                                            width={width}
+                                            height={height}
+                                            color="white"
+                                        />
+                                    </Group>
+                                }
+                            >
+                                <RoundedRect
+                                    x={0}
+                                    y={0}
+                                    origin={transformOrigin}
+                                    width={width}
+                                    height={draggableHeight}
+                                    r={radius}
+                                    color="black"
+                                    transform={transform}
+                                />
+                            </Mask>
+                        </Canvas> */}
             {/* Background draggable */}
+            <Animated.View
+                style={[
+                    {
+                        position: "absolute",
+                        top: 0,
+                        right: 0,
+                        marginHorizontal: 10,
+                    },
+                    childFade,
+                ]}
+            >
+                {props.header}
+            </Animated.View>
             <View style={[StyleSheet.absoluteFill]} pointerEvents="box-none">
-                <FixedDraggable
-                    content={props.clippedContent}
-                    header={props.clippedHeader}
-                />
+                {isLiquidGlassAvailable() ? (
+                    <MaskedView
+                        pointerEvents="box-none"
+                        style={[StyleSheet.absoluteFill]}
+                        maskElement={
+                            <Canvas
+                                style={[
+                                    StyleSheet.absoluteFill,
+                                    { zIndex: 1000 },
+                                ]}
+                                pointerEvents="none"
+                            >
+                                <Mask
+                                    mode="luminance"
+                                    mask={
+                                        <Group>
+                                            <Rect
+                                                x={0}
+                                                y={0}
+                                                width={width}
+                                                height={height}
+                                                color="white"
+                                            />
+                                            <RoundedRect
+                                                x={0}
+                                                y={0}
+                                                origin={transformOrigin}
+                                                width={width}
+                                                height={draggableHeight}
+                                                r={radius}
+                                                color="black"
+                                                transform={transform}
+                                            />
+                                        </Group>
+                                    }
+                                >
+                                    <Rect
+                                        x={0}
+                                        y={0}
+                                        width={width}
+                                        height={height}
+                                        color="white"
+                                    />
+                                </Mask>
+                            </Canvas>
+                            // <View style={[StyleSheet.absoluteFill, {backgroundColor: "white"}]} />
+                        }
+                    >
+                        <FixedDraggable
+                            content={props.clippedContent}
+                            ref={bottomDraggableRef}
+                        />
+                    </MaskedView>
+                ) : (
+                    <FixedDraggable
+                        content={props.clippedContent}
+                        ref={bottomDraggableRef}
+                    />
+                )}
             </View>
 
             {/* Foreground draggable */}
@@ -157,7 +274,6 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
             >
                 <FixedDraggable
                     content={props.topContent}
-                    header={props.topHeader}
                     ref={topDraggableRef}
                     defaultPosition={0.5}
                 />

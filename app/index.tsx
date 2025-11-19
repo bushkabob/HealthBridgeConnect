@@ -284,7 +284,7 @@ export default function Map() {
                     ))}
                 </MapView>
                 <ClippedDraggables
-                    clippedHeader={
+                    header={
                         <DraggableHeader
                             loading={!searchingCenters && !loading}
                             locationColor={locationColor}
