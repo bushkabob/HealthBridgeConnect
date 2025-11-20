@@ -60,7 +60,7 @@ const DraggableContent = (props: DraggableContentProps) => {
             if (!prev) {
                 return;
             }
-            if (curr[1].value === false && (curr[0].value as number) < 1) {
+            if (curr[1].value === false && (curr[0].value as number) < 1 && searchValue === "") {
                 runOnJS(cancelActiveSearch)();
             }
         }

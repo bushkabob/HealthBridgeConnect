@@ -22,7 +22,10 @@ import Animated, {
     withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import FixedDraggable, { BOTTOM_OFFSET, FixedDraggableHandle } from "./FixedDraggable";
+import FixedDraggable, {
+    BOTTOM_OFFSET,
+    FixedDraggableHandle,
+} from "./FixedDraggable";
 
 interface ClippedDraggablesProps {
     clippedContent: ReactElement;
@@ -63,6 +66,11 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
         topDraggableRef.current?.updateHeight(0.5, 1);
     };
 
+    const minimizeBottom = () => {
+        bottomDraggableRef.current &&
+            bottomDraggableRef.current.updateHeight(0.0, 0);
+    };
+
     // Pull values from FixedDraggable Top
     const translateY = useDerivedValue(() => {
         return topDraggableRef.current?.translateY.value ?? 0;
@@ -78,7 +86,11 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
 
     const draggableHeight = useDerivedValue(() => {
         // if(bottomDraggableRef.current !== undefined && topDraggableRef.current !== undefined && detailSheetY.value === 0) {
-        //     bottomDraggableRef.current.updateTranslateY_INTERNAL_USE_ONLY(topDraggableRef.current.translateY.value)
+        //     console.log("pass 1")
+        //     if(bottomDraggableRef.current.progress.value > topDraggableRef.current.progress.value) {
+        //         console.log("pass 2")
+        //         bottomDraggableRef.current.updateTranslateY_INTERNAL_USE_ONLY(topDraggableRef.current.translateY.value)
+        //     }
         // }
         return topDraggableRef.current?.height.value ?? 0;
     });
@@ -105,7 +117,13 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
     });
 
     const childFade = useAnimatedStyle(() => {
-        const progress = (topDraggableRef.current && bottomDraggableRef.current) ? Math.max(topDraggableRef.current.progress.value, bottomDraggableRef.current.progress.value) : 0
+        const progress =
+            topDraggableRef.current && bottomDraggableRef.current
+                ? Math.max(
+                      topDraggableRef.current.progress.value,
+                      bottomDraggableRef.current.progress.value
+                  )
+                : 0;
         const opacity = interpolate(
             progress,
             [0.7, 0.8],
@@ -118,7 +136,15 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
             [0.94, 1],
             Extrapolate.CLAMP
         );
-        const translateYInter = Math.min(translateY.value + detailSheetY.value, bottomDraggableRef.current ? bottomDraggableRef.current.translateY.value : translateY.value + detailSheetY.value) - BOTTOM_OFFSET - 130;
+        const translateYInter =
+            Math.min(
+                translateY.value + detailSheetY.value,
+                bottomDraggableRef.current
+                    ? bottomDraggableRef.current.translateY.value
+                    : translateY.value + detailSheetY.value
+            ) -
+            BOTTOM_OFFSET -
+            130;
         return {
             transform: [{ translateY: translateYInter }, { scale: scale }],
             opacity: opacity,
@@ -128,9 +154,13 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
 
     useImperativeHandle(props.ref, () => ({
         open: () => {
-            detailSheetY.value = withTiming(0, {
-                duration: HIDE_OVERLAY_DELAY,
-            });
+            detailSheetY.value = withTiming(
+                0,
+                {
+                    duration: HIDE_OVERLAY_DELAY,
+                },
+                () => runOnJS(minimizeBottom)()
+            );
         },
         close: () => {
             detailSheetY.value = withTiming(

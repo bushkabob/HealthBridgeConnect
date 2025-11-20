@@ -3,41 +3,58 @@ import { HeightUpdateFunction } from "@/types/types";
 import { Ionicons } from "@expo/vector-icons";
 import SegmentedControl from "@react-native-segmented-control/segmented-control";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Platform, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 interface SearchRowProps {
     value: string;
     setValue: Function;
     setViewHeight?: HeightUpdateFunction;
-    searchArea: string
-    setSearchArea: Function
-    setSearchActive: Function
-    searchActive: boolean
+    searchArea: string;
+    setSearchArea: Function;
+    setSearchActive: Function;
+    searchActive: boolean;
 }
 
 const SearchRow = (props: SearchRowProps) => {
     const searchBackground = useThemeColor({}, "background");
     const textColor = useThemeColor({}, "text");
     const textFieldRef = useRef<TextInput>(null);
+    const [editing, setEditing] = useState(false);
 
     useEffect(() => {
         // props.setHeaderHeight(searchActive ? 82 + 50 : 82)
-        console.log(props.searchActive)
-    }, [props.searchActive])
+        console.log(props.searchActive);
+    }, [props.searchActive]);
 
     useEffect(() => {
-        console.log("mounted")
-    }, [])
+        console.log("mounted");
+    }, []);
+
+    useEffect(() => {
+        if (Platform.OS === "android") {
+            if (editing) {
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        textFieldRef.current?.focus();
+                    }, 0);
+                });
+            }
+        } else {
+            textFieldRef.current && editing && textFieldRef.current?.focus();
+        }
+    }, [editing]);
 
     return (
-        <View style={styles.header} >
+        <View style={styles.header}>
             <View style={styles.row}>
                 <Pressable
                     style={styles.search}
-                    onPress={() =>
-                        textFieldRef.current && textFieldRef.current?.focus()
-                    }
+                    onPress={() => {
+                        setEditing(true);
+                    }}
+                    onMoveShouldSetResponder={() => false}
+                    onStartShouldSetResponder={() => false}
                 >
                     <GlassView
                         isInteractive
@@ -50,6 +67,7 @@ const SearchRow = (props: SearchRowProps) => {
                                     : searchBackground,
                             },
                         ]}
+                        pointerEvents={editing ? "auto" : "none"}
                     >
                         <Ionicons
                             name="search"
@@ -68,10 +86,12 @@ const SearchRow = (props: SearchRowProps) => {
                                 flex: 1,
                             }}
                             onFocus={() => {
-                                (props.setViewHeight &&
-                                    props.setViewHeight(1.0, 300));
+                                props.setViewHeight &&
+                                    props.setViewHeight(1.0, 300);
                                 props.setSearchActive(true);
                             }}
+                            onBlur={() => setEditing(false)}
+                            scrollEnabled={false}
                         />
                     </GlassView>
                 </Pressable>
@@ -104,8 +124,8 @@ const SearchRow = (props: SearchRowProps) => {
                     </Pressable>
                 )}
             </View>
-            {props.searchActive && (
-                <View style={{marginBottom: 20}} >
+            {(props.searchActive) && (
+                <View style={{ marginBottom: 20 }}>
                     <SegmentedControl
                         onChange={() =>
                             props.setSearchArea((val: string) =>
@@ -136,7 +156,7 @@ const styles = StyleSheet.create({
         borderRadius: 40,
         padding: Platform.OS === "android" ? 0 : 10,
         alignItems: "center",
-        paddingHorizontal: 10
+        paddingHorizontal: 10,
     },
     close: {
         padding: 10,
@@ -144,7 +164,7 @@ const styles = StyleSheet.create({
     },
     header: {
         marginHorizontal: 20,
-    }
+    },
 });
 
 export default SearchRow;
