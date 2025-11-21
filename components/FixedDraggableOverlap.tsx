@@ -141,7 +141,8 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
     });
 
     const childFade = useAnimatedStyle(() => {
-        const progress = Math.max(topProgress.value, bottomProgress.value);
+        const topProgress = 1 - (topTranslateY.value + detailSheetY.value - SNAP_TOP) / (SNAP_BOTTOM - SNAP_TOP)
+        const progress = Math.max(topProgress,  bottomProgress.value);
 
         const opacity = interpolate(
             progress,
