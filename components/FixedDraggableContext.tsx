@@ -11,6 +11,7 @@ type FixedDraggableContextType = {
     setViewHeight: HeightUpdateFunction;
     scrollHandler?: ScrollHandlerProcessed<Record<string, unknown>>
     gesture: NativeGesture
+    MIN_HEIGHT: number
 };
 
 const FixedDraggableContext = createContext<FixedDraggableContextType | null>(null);

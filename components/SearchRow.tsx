@@ -24,12 +24,7 @@ const SearchRow = (props: SearchRowProps) => {
 
     useEffect(() => {
         // props.setHeaderHeight(searchActive ? 82 + 50 : 82)
-        console.log(props.searchActive);
     }, [props.searchActive]);
-
-    useEffect(() => {
-        console.log("mounted");
-    }, []);
 
     useEffect(() => {
         if (Platform.OS === "android") {
@@ -101,6 +96,7 @@ const SearchRow = (props: SearchRowProps) => {
                             props.setViewHeight &&
                                 props.setViewHeight(0.0, 300);
                             props.setSearchActive(false);
+                            props.setValue("")
                         }}
                     >
                         <GlassView

@@ -2,10 +2,11 @@
 import { useThemeColor } from "@/hooks/use-theme-color";
 import Constants from "expo-constants";
 import { GlassView } from "expo-glass-effect";
-import React, { ReactElement, RefObject, useImperativeHandle } from "react";
+import React, { ReactElement } from "react";
 import { Dimensions, Keyboard, Platform, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+    DerivedValue,
     Extrapolate,
     Extrapolation,
     interpolate,
@@ -20,76 +21,70 @@ import Animated, {
 
 import { FixedDraggableProvider } from "./FixedDraggableContext";
 
-export type FixedDraggableHandle = {
-    updateHeight: (height: number, delay: number) => void;
-    translateY: SharedValue<number>;
-    scale: SharedValue<number>;
-    radius: SharedValue<number>;
-    height: SharedValue<number>;
-    progress: SharedValue<number>;
-    // updateTranslateY_INTERNAL_USE_ONLY: (value: number) => void;
-};
-
 type FixedDraggableProps = {
     content: ReactElement;
     header?: ReactElement;
-    defaultPosition?: number;
-    ref?: RefObject<FixedDraggableHandle | undefined>;
+    translateY?: SharedValue<number>;
+    progress?: DerivedValue<number>;
+    scaleRange?: [number, number];
+    heightRange?: [number, number];
+    radiusRange?: [number, number];
 };
 
 const { height } = Dimensions.get("window");
 const AnimatedGlassView = Animated.createAnimatedComponent(GlassView);
 
-export const MIN_HEIGHT = 82;
-export const MAX_HEIGHT = height - Constants.statusBarHeight;
-export const SNAP_TOP = 0 + Constants.statusBarHeight;
-export const BOTTOM_OFFSET = 15;
-export const SNAP_BOTTOM = height - MIN_HEIGHT - BOTTOM_OFFSET;
-export const SNAP_MIDDLE = (SNAP_TOP + SNAP_BOTTOM) / 2;
-export const SCALE_MIN = 0.9;
-export const SCALE_MAX = 1.0;
+const MIN_HEIGHT = 82;
+const MAX_HEIGHT = height - Constants.statusBarHeight;
+const BOTTOM_OFFSET = 15;
+const SCALE_MIN = 0.9;
+const SCALE_MAX = 1.0;
+
+const SNAP_TOP = 0 + Constants.statusBarHeight;
+const SNAP_BOTTOM = height - MIN_HEIGHT - BOTTOM_OFFSET;
+const SNAP_MIDDLE = (SNAP_TOP + SNAP_BOTTOM) / 2;
 
 const FixedDraggable: React.FC<FixedDraggableProps> = (
     props: FixedDraggableProps
 ) => {
-    const background2 = useThemeColor({}, "background3");
+    const internalTranslateY = useSharedValue(SNAP_BOTTOM);
+    const translateY = props.translateY ?? internalTranslateY;
 
-    if (
-        props.defaultPosition &&
-        (props.defaultPosition > 1 || props.defaultPosition < 0)
-    ) {
-        throw new Error("Default position must be between 0 and 1");
-    }
-
-    const translateY = useSharedValue(SNAP_BOTTOM);
-    const progress = useDerivedValue(
+    const internalProgress = useDerivedValue(
         () => 1 - (translateY.value - SNAP_TOP) / (SNAP_BOTTOM - SNAP_TOP)
     );
+    const progress = props.progress ?? internalProgress;
+
+    const background2 = useThemeColor({}, "background3");
+
+    const scaleRange = props.scaleRange ?? [SCALE_MIN, SCALE_MAX];
     const scale = useDerivedValue(() => {
         const scale = interpolate(
             progress.value,
             [0, 1],
-            [SCALE_MIN, SCALE_MAX],
+            scaleRange,
             Extrapolate.CLAMP
         );
         return scale;
     });
 
-    const derivedHeight = useDerivedValue(() => {
+    const heightRange = props.heightRange ?? [MIN_HEIGHT, MAX_HEIGHT];
+    const height = useDerivedValue(() => {
         const height = interpolate(
             progress.value,
             [0, 1],
-            [MIN_HEIGHT, MAX_HEIGHT],
+            heightRange,
             Extrapolation.CLAMP
         );
         return height;
     });
 
+    const radiusRange = props.radiusRange ?? [40, 0];
     const radius = useDerivedValue(() => {
         const radius = interpolate(
             progress.value,
             [0.7, 1],
-            [40, 0],
+            radiusRange,
             Extrapolation.CLAMP
         );
         return radius;
@@ -128,26 +123,6 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (
             cancelSnapping
         );
     };
-
-    // const updateTranslateY_INTERNAL_USE_ONLY = (value: number) => {
-    //     "worklet";
-    //     if (Math.abs(translateY.value - value) > 100) {
-    //     } else {
-    //         translateY.value = value;
-    //     }
-    // };
-
-    useImperativeHandle(props.ref, () => {
-        return {
-            updateHeight,
-            // updateTranslateY_INTERNAL_USE_ONLY,
-            translateY,
-            scale,
-            height: derivedHeight,
-            radius,
-            progress,
-        };
-    });
 
     const cancelSnapping = () => {
         "worklet";
@@ -207,7 +182,7 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (
             ],
             borderBottomLeftRadius: radius.value,
             borderBottomRightRadius: radius.value,
-            height: derivedHeight.value,
+            height: height.value,
         };
     });
 
@@ -268,6 +243,7 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (
                 scrollY,
                 scrollHandler,
                 setViewHeight: updateHeight,
+                MIN_HEIGHT: heightRange[0]
             }}
         >
             {/*Header*/}

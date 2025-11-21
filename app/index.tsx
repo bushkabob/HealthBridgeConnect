@@ -4,7 +4,6 @@ import DraggableContent from "@/components/DraggableContent";
 import DraggableHeader from "@/components/DraggableHeader";
 import ClippedDraggables, {
     ClippedDraggablesHandle,
-    HIDE_OVERLAY_DELAY,
 } from "@/components/FixedDraggableOverlap";
 import useDatabase from "@/hooks/useDatabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -15,8 +14,16 @@ import { Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { MapMarker } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
 import { FQHCSite, MapCenter } from "../types/types";
 import { haversineDistance } from "./utils";
+
+const INITIAL_REGION = {
+    latitude: 39.3669492313556,
+    latitudeDelta: 82.71817584815484,
+    longitude: -96.13953430290948,
+    longitudeDelta: 55.18789991356607,
+};
 
 export default function Map() {
     const [locationColor, setLocationColor] = useState<string>("gray");
@@ -24,20 +31,33 @@ export default function Map() {
     const [allCenters, setAllCenters] = useState<FQHCSite[]>([]);
     const [nearbyCenters, setNearbyCenters] = useState<FQHCSite[]>([]);
     const [displayCenters, setDisplayCenters] = useState<FQHCSite[]>([]);
+    // const [geoJson, setGeoJson] = useState<
+    //     Supercluster.PointFeature<Supercluster.AnyProps>[]
+    // >([]);
     const [currentCenter, setCurrentCenter] = useState<MapCenter>(undefined);
     const [detailCenter, setDetailCenter] = useState<FQHCSite>();
+    const [lastValidDetailCenter, setLastValidDetailCenter] =
+        useState<FQHCSite>();
 
     const [searchRadius, setSearchRadius] = useState<number>(10);
     const [unit, setUnit] = useState<string>("Imperial");
     const [searchingCenters, setSearchingCenters] = useState<boolean>(false);
-
-    // const [visibleCalloutId, setVisibleCalloutId] = useState<string>("")
+    const [region, setRegion] = useState(INITIAL_REGION);
 
     const { loading, query } = useDatabase();
 
     const mapRef = useRef<MapView>(null);
     // @ts-ignore
     const markerRefs = useRef<Record<string, Marker | null>>({});
+
+    // const [points, supercluster] = useClusterer(
+    //     geoJson,
+    //     {
+    //         width: Dimensions.get("screen").width,
+    //         height: Dimensions.get("screen").height,
+    //     },
+    //     region
+    // );
 
     //Loads data from db
     useEffect(() => {
@@ -102,12 +122,23 @@ export default function Map() {
     //Turn off activity indicator when displayed centers are updated
     useEffect(() => {
         !loading && setSearchingCenters(false);
+        // const geoJsons = displayCenters.map((val) => {
+        //     return {
+        //         type: "Feature" as "Feature",
+        //         geometry: {
+        //             type: "Point" as "Point",
+        //             coordinates: [Number(val["Geocoding Artifact Address Primary Y Coordinate"]), Number(val["Geocoding Artifact Address Primary X Coordinate"])]
+        //         },
+        //         properties: {}
+        //     };
+        // });
+        // setGeoJson(geoJsons);
     }, [displayCenters]);
 
     //Show callout when detailCenter is set
     useEffect(() => {
-        console.log(detailCenter);
-        if (detailCenter != undefined) {
+        if (detailCenter !== undefined) {
+            setLastValidDetailCenter(detailCenter);
             (
                 markerRefs.current[
                     detailCenter["BPHC Assigned Number"]
@@ -148,7 +179,7 @@ export default function Map() {
 
     //Moves map to provided location
     const moveToLocation = (location: Location.LocationObject) => {
-        if (mapRef.current) {
+        if (mapRef.current !== undefined && mapRef.current !== null) {
             setLocationColor("#60b1fc");
             mapRef.current.animateToRegion(
                 {
@@ -267,19 +298,40 @@ export default function Map() {
                                   left: safeAreaInsets.left + 20,
                               }
                     }
-                    ref={mapRef}
+                    //@ts-ignore
+                    ref={(ref) => (mapRef.current = ref)}
                     style={{ width: "100%", height: "100%" }}
                     showsMyLocationButton={false}
                     showsUserLocation
+                    onRegionChangeComplete={setRegion}
+                    initialRegion={INITIAL_REGION}
                 >
                     {displayCenters.map((center) => (
                         <CenterMarker
-                            onPress={() => setDetailCenter(center)}
+                            onPress={() => {
+                                setDetailCenter(center);
+                            }}
                             key={center["BPHC Assigned Number"]}
                             center={center}
                             refFunc={createMarkerRef(
                                 center["BPHC Assigned Number"]
                             )}
+                            selected={
+                                center["BPHC Assigned Number"] ===
+                                detailCenter?.["BPHC Assigned Number"]
+                            }
+                            coordinate={{
+                                latitude: Number(
+                                    center[
+                                        "Geocoding Artifact Address Primary Y Coordinate"
+                                    ]
+                                ),
+                                longitude: Number(
+                                    center[
+                                        "Geocoding Artifact Address Primary X Coordinate"
+                                    ]
+                                ),
+                            }}
                         />
                     ))}
                 </MapView>
@@ -311,21 +363,29 @@ export default function Map() {
                         />
                     }
                     topContent={
-                        detailCenter ? 
-                        <CenterDetails
-                            close={
-                                draggableOverlapImperatives.current
-                                    ? () => {
-                                        (markerRefs.current[detailCenter["BPHC Assigned Number"]] as MapMarker).hideCallout();
-                                        draggableOverlapImperatives.current && draggableOverlapImperatives.current.close();
-                                        setTimeout(() => setDetailCenter(undefined), HIDE_OVERLAY_DELAY)
-                                    }
-                                    : () => {}
-                            }
-                            center={detailCenter}
-                        />
-                        :
-                        <></>
+                        lastValidDetailCenter ? (
+                            <CenterDetails
+                                close={
+                                    draggableOverlapImperatives.current
+                                        ? () => {
+                                              (
+                                                  markerRefs.current[
+                                                      lastValidDetailCenter[
+                                                          "BPHC Assigned Number"
+                                                      ]
+                                                  ] as MapMarker
+                                              ).hideCallout();
+                                              draggableOverlapImperatives.current &&
+                                                  draggableOverlapImperatives.current.close();
+                                              setDetailCenter(undefined);
+                                          }
+                                        : () => {}
+                                }
+                                center={lastValidDetailCenter}
+                            />
+                        ) : (
+                            <></>
+                        )
                     }
                     ref={draggableOverlapImperatives}
                 />

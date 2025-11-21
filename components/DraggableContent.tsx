@@ -13,7 +13,7 @@ import Animated, {
     useAnimatedReaction,
 } from "react-native-reanimated";
 import CenterInfoSearch from "./CenterInfoSearch";
-import { DraggableHandle, MIN_HEIGHT } from "./FixedDraggable";
+import { DraggableHandle } from "./FixedDraggable";
 import { useFixedDraggable } from "./FixedDraggableContext";
 import SearchRow from "./SearchRow";
 
@@ -34,10 +34,6 @@ interface DraggableContentProps {
 }
 
 const DraggableContent = (props: DraggableContentProps) => {
-    useEffect(() => {
-        console.log("remount content");
-    }, []);
-
     const [searchValue, setSearchValue] = useState("");
     const [displayCities, setDisplayCities] = useState<City[]>([]);
     const [searchArea, setSearchArea] = useState<string>("");
@@ -46,9 +42,9 @@ const DraggableContent = (props: DraggableContentProps) => {
         [key: string]: { lat: number; lon: number };
     }>({});
 
-    const headerHeight = MIN_HEIGHT;
+    const { progress, snapping, scrollY, setViewHeight, MIN_HEIGHT } = useFixedDraggable();
 
-    const { progress, snapping, scrollY, setViewHeight } = useFixedDraggable();
+    const headerHeight = MIN_HEIGHT;
 
     const cancelActiveSearch = () => {
         setSearchActive(false);
@@ -398,7 +394,7 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
                     </View>
                 }
                 renderItem={(val) => {
-                    const delta = val.item.isCity ? 0.1 : 0.01;
+                    const delta = val.item.isCity ? 0.1 : 0.3;
                     const moveToIcon = () => {
                         props.mapRef.current?.animateToRegion(
                             {

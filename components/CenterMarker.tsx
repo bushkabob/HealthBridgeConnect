@@ -1,96 +1,88 @@
-import { useThemeColor } from "@/hooks/use-theme-color";
 import { FQHCSite } from "@/types/types";
-import { useRouter } from "expo-router";
-import { Marker } from "react-native-maps";
+import { Ionicons } from "@expo/vector-icons";
+import { useEffect } from "react";
+import { View } from "react-native";
+import { LatLng, Marker } from "react-native-maps";
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withTiming,
+} from "react-native-reanimated";
 
 interface CenterMarkerProps {
     center: FQHCSite;
-    refFunc: any
-    onPress: Function
+    refFunc: any;
+    onPress: Function;
+    selected: boolean;
+    coordinate: LatLng
 }
 
 const CenterMarker = (props: CenterMarkerProps) => {
-    const backgroundColor = useThemeColor({}, "background");
-    const textColor = useThemeColor({}, "text");
-    const router = useRouter();
+    // Reanimated shared value
+    const scale = useSharedValue(1);
+
+    useEffect(() => {
+        scale.value = withTiming(props.selected ? 1.5 : 1, {
+            duration: 120,
+        });
+    }, [props.selected]);
+
+    // Reanimated style
+    const animatedStyle = useAnimatedStyle(() => {
+        return {
+            transform: [{ scale: scale.value }]
+        };
+    });
 
     return (
-        <Marker onPress={(e)=>{props.onPress(); e.stopPropagation()}} ref={(ref) => {props.refFunc(ref)}} coordinate={{ latitude: Number(props.center["Geocoding Artifact Address Primary Y Coordinate"]), longitude: Number(props.center["Geocoding Artifact Address Primary X Coordinate"]) }} >
-            {/* <Callout
-                onPress={() => {
-                    router.push({
-                        pathname: "/details",
-                        params: {
-                            id: props.center["BPHC Assigned Number"],
-                            name: props.center["Site Name"],
-                        },
-                    });
+        <Marker
+            onPress={(e) => {
+                props.onPress();
+                e.stopPropagation();
+                e.preventDefault()
+            }}
+            key={props.center["BPHC Assigned Number"]}
+            id={props.center["BPHC Assigned Number"]}
+            ref={(ref: any) => props.refFunc(ref)}
+            coordinate={props.coordinate}
+        >
+            {/* FIX: Stable bounding box wrapper */}
+            <View
+                style={{
+                    width: 60,
+                    height: 70,
+                    alignItems: "center",
+                    justifyContent: "center",
                 }}
-                tooltip={Platform.OS !== "android"}
             >
-                <View
-                    style={{
-                        backgroundColor: backgroundColor,
-                        borderRadius: 16,
-                        paddingVertical: 10,
-                        paddingHorizontal: 14,
-                        overflow: "hidden",
-                        maxWidth: 260,
-                        flexShrink: 1,
-                    }}
-                >
+                <Animated.View style={[{ alignItems: "center" }, animatedStyle]}>
                     <View
                         style={{
-                            flexDirection: "row",
+                            width: 40,
+                            height: 40,
+                            borderRadius: 20,
+                            backgroundColor: "red",
+                            borderWidth: 2,
+                            borderColor: "white",
                             alignItems: "center",
-                            flexWrap: "wrap", // allows text to expand vertically
-                            justifyContent: "space-between",
+                            justifyContent: "center",
                         }}
                     >
-                        <View
-                            style={{
-                                flexShrink: 1,
-                                flexGrow: 1,
-                                marginRight: 8,
-                            }}
-                        >
-                            <Text
-                                style={{
-                                    color: textColor,
-                                    fontWeight: "600",
-                                    flexShrink: 1,
-                                    flexWrap: "wrap",
-                                }}
-                            >
-                                {props.center["Site Name"]}
-                            </Text>
-                            <Text
-                                style={{
-                                    color: textColor,
-                                    flexShrink: 1,
-                                    flexWrap: "wrap",
-                                }}
-                            >
-                                {props.center["Site Address"]}
-                            </Text>
-                        </View>
-
-                        <Pressable
-                            style={{
-                                alignItems: "center",
-                                justifyContent: "center",
-                                marginTop: 4,
-                            }}
-                        >
-                            <Ionicons
-                                size={20}
-                                name="arrow-forward"
-                                color={textColor}
-                            />
-                        </Pressable>
+                        <Ionicons name="medical" size={22} color="white" />
                     </View>
-                </View>
-            </Callout> */}
+
+                    <View
+                        style={{
+                            width: 10,
+                            height: 10,
+                            borderLeftColor: "transparent",
+                            borderRightColor: "transparent",
+                            borderTopColor: "white",
+                            marginTop: -2,
+                        }}
+                    />
+                </Animated.View>
+            </View>
         </Marker>
     );
 };

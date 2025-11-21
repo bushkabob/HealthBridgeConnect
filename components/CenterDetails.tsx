@@ -23,7 +23,7 @@ import {
     useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { FQHCSite } from "../types/types";
-import { DraggableHandle, MIN_HEIGHT } from "./FixedDraggable";
+import { DraggableHandle } from "./FixedDraggable";
 import { useFixedDraggable } from "./FixedDraggableContext";
 
 interface CenterDetailProps {
@@ -36,12 +36,13 @@ const CenterDetails = (props: CenterDetailProps) => {
         progress,
         scrollHandler,
         scrollY,
+        MIN_HEIGHT
     } = useFixedDraggable();
 
+    const headerHeight = MIN_HEIGHT
     const frame = useSafeAreaFrame();
     const insets = useSafeAreaInsets();
     // const headerHeight = getDefaultHeaderHeight(frame, false, insets.top);
-    const headerHeight = MIN_HEIGHT;
     const [scrollEnabled, setScrollEnabled] = useState<boolean>(false);
 
     const textColor = useThemeColor({}, "text");
