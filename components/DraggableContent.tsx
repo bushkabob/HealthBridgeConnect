@@ -394,7 +394,7 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
                     </View>
                 }
                 renderItem={(val) => {
-                    const delta = val.item.isCity ? 0.1 : 0.3;
+                    const delta = val.item.isCity ? 0.1 : 0.1;
                     const moveToIcon = () => {
                         props.mapRef.current?.animateToRegion(
                             {

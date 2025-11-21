@@ -47,13 +47,20 @@ const SNAP_MIDDLE = (SNAP_TOP + SNAP_BOTTOM) / 2;
 const FixedDraggable: React.FC<FixedDraggableProps> = (
     props: FixedDraggableProps
 ) => {
-    const internalTranslateY = useSharedValue(SNAP_BOTTOM);
-    const translateY = props.translateY ?? internalTranslateY;
+    // const internalTranslateY = useSharedValue(SNAP_BOTTOM);
+    let translateY: SharedValue<number>;
+    if (props.translateY) {
+        translateY = props.translateY;
+    } else {
+        translateY = useSharedValue(SNAP_BOTTOM);
+    }
 
-    const internalProgress = useDerivedValue(
-        () => 1 - (translateY.value - SNAP_TOP) / (SNAP_BOTTOM - SNAP_TOP)
-    );
-    const progress = props.progress ?? internalProgress;
+    let progress: SharedValue<number>;
+    if (props.progress) {
+        progress = props.progress;
+    } else {
+        progress = useSharedValue(SNAP_BOTTOM);
+    }
 
     const background2 = useThemeColor({}, "background3");
 
@@ -243,7 +250,7 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (
                 scrollY,
                 scrollHandler,
                 setViewHeight: updateHeight,
-                MIN_HEIGHT: heightRange[0]
+                MIN_HEIGHT: heightRange[0],
             }}
         >
             {/*Header*/}

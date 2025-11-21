@@ -18,7 +18,6 @@ import Animated, {
     withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import FixedDraggable from "./FixedDraggable";
 
 interface ClippedDraggablesProps {
     clippedContent: ReactElement;
@@ -30,6 +29,7 @@ interface ClippedDraggablesProps {
 import MaskedView from "@react-native-masked-view/masked-view";
 import Constants from "expo-constants";
 import { isLiquidGlassAvailable } from "expo-glass-effect";
+import FixedDraggable from "./FixedDraggable";
 
 export const HIDE_OVERLAY_DELAY = 600;
 
