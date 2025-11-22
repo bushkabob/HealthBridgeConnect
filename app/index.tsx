@@ -1,5 +1,4 @@
 import CenterDetails from "@/components/CenterDetails";
-import CenterMarker from "@/components/CenterMarker";
 import DraggableContent from "@/components/DraggableContent";
 import DraggableHeader from "@/components/DraggableHeader";
 import ClippedDraggables, {
@@ -10,10 +9,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Platform, View } from "react-native";
+import { Dimensions, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView, { MapMarker } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Supercluster from "supercluster";
 
 import { FQHCSite, MapCenter } from "../types/types";
 import { haversineDistance } from "./utils";
@@ -25,15 +25,15 @@ const INITIAL_REGION = {
     longitudeDelta: 55.18789991356607,
 };
 
+const { width, height } = Dimensions.get("window");
+
 export default function Map() {
     const [locationColor, setLocationColor] = useState<string>("gray");
 
     const [allCenters, setAllCenters] = useState<FQHCSite[]>([]);
     const [nearbyCenters, setNearbyCenters] = useState<FQHCSite[]>([]);
     const [displayCenters, setDisplayCenters] = useState<FQHCSite[]>([]);
-    // const [geoJson, setGeoJson] = useState<
-    //     Supercluster.PointFeature<Supercluster.AnyProps>[]
-    // >([]);
+
     const [currentCenter, setCurrentCenter] = useState<MapCenter>(undefined);
     const [detailCenter, setDetailCenter] = useState<FQHCSite>();
     const [lastValidDetailCenter, setLastValidDetailCenter] =
@@ -42,22 +42,17 @@ export default function Map() {
     const [searchRadius, setSearchRadius] = useState<number>(10);
     const [unit, setUnit] = useState<string>("Imperial");
     const [searchingCenters, setSearchingCenters] = useState<boolean>(false);
-    const [region, setRegion] = useState(INITIAL_REGION);
+
+    const [supercluster, setSupercluster] = useState<Supercluster>();
+    const [clusteredDisplayCenters, setClusteredDisplayCenters] = useState<
+        any[]
+    >([]);
 
     const { loading, query } = useDatabase();
 
     const mapRef = useRef<MapView>(null);
     // @ts-ignore
     const markerRefs = useRef<Record<string, Marker | null>>({});
-
-    // const [points, supercluster] = useClusterer(
-    //     geoJson,
-    //     {
-    //         width: Dimensions.get("screen").width,
-    //         height: Dimensions.get("screen").height,
-    //     },
-    //     region
-    // );
 
     //Loads data from db
     useEffect(() => {
@@ -122,18 +117,105 @@ export default function Map() {
     //Turn off activity indicator when displayed centers are updated
     useEffect(() => {
         !loading && setSearchingCenters(false);
-        // const geoJsons = displayCenters.map((val) => {
-        //     return {
-        //         type: "Feature" as "Feature",
-        //         geometry: {
-        //             type: "Point" as "Point",
-        //             coordinates: [Number(val["Geocoding Artifact Address Primary Y Coordinate"]), Number(val["Geocoding Artifact Address Primary X Coordinate"])]
-        //         },
-        //         properties: {}
-        //     };
-        // });
-        // setGeoJson(geoJsons);
+        //Super cluster
+        if (!displayCenters || displayCenters.length === 0) {
+            setSupercluster(undefined);
+            setClusteredDisplayCenters([]);
+            return;
+        }
+
+        const points = displayCenters.map((item) => ({
+            type: "Feature" as "Feature",
+            properties: {
+                cluster: false,
+                id: item["BPHC Assigned Number"],
+                raw: item,
+            },
+            geometry: {
+                type: "Point" as "Point",
+                coordinates: [
+                    Number(
+                        item["Geocoding Artifact Address Primary X Coordinate"]
+                    ),
+                    Number(
+                        item["Geocoding Artifact Address Primary Y Coordinate"]
+                    ),
+                ],
+            },
+        }));
+
+        const sc = new Supercluster({
+            radius: 60,
+            maxZoom: 20,
+        });
+
+        sc.load(points);
+        setSupercluster(sc);
     }, [displayCenters]);
+
+    const computeVisibleClusters = async () => {
+        console.log("computing superlcluster");
+        if (!supercluster || !mapRef.current) return;
+
+        const bounds = await mapRef.current.getMapBoundaries();
+        const zoom = boundariesToZoom(bounds);
+        console.log("computed zoom:", zoom);
+
+        const worldBounds: [number, number, number, number] = [
+            -180, -85, 180, 85,
+        ];
+
+        const clusters = supercluster.getClusters(worldBounds, zoom);
+
+        const formatted = clusters.map((item) => {
+            if (item.properties.cluster) {
+                return {
+                    type: "cluster",
+                    id: item.id,
+                    count: item.properties.point_count,
+                    coordinate: {
+                        latitude: item.geometry.coordinates[1],
+                        longitude: item.geometry.coordinates[0],
+                    },
+                };
+            }
+
+            return {
+                type: "center",
+                id: item.properties.id,
+                center: item.properties.raw,
+                coordinate: {
+                    latitude: item.geometry.coordinates[1],
+                    longitude: item.geometry.coordinates[0],
+                },
+            };
+        });
+        console.log(formatted.length)
+        setClusteredDisplayCenters(formatted);
+    };
+
+    function boundariesToZoom(boundaries: {
+        northEast: { latitude: number; longitude: number };
+        southWest: { latitude: number; longitude: number };
+    }) {
+        const {
+            northEast: { latitude: latNE, longitude: lonNE },
+            southWest: { latitude: latSW, longitude: lonSW },
+        } = boundaries;
+
+        const lonDelta = Math.abs(lonNE - lonSW);
+
+        const zoom = Math.max(
+            0,
+            Math.min(20, Math.round(Math.log2(360 / lonDelta)))
+        );
+
+        return zoom;
+    }
+
+    useEffect(() => {
+        computeVisibleClusters();
+    }, [supercluster]);
 
     //Show callout when detailCenter is set
     useEffect(() => {
@@ -258,9 +340,32 @@ export default function Map() {
     };
 
     const safeAreaInsets = useSafeAreaInsets();
+    const MAP_OFFSET =
+        Platform.OS === "android"
+            ? {
+                  top: safeAreaInsets.top,
+                  right: safeAreaInsets.right + 20,
+                  bottom: safeAreaInsets.bottom + 60,
+                  left: safeAreaInsets.left + 20,
+              }
+            : {
+                  top: 0,
+                  right: safeAreaInsets.left + 20,
+                  bottom: safeAreaInsets.bottom + 15,
+                  left: safeAreaInsets.left + 20,
+              };
 
     const draggableOverlapImperatives =
         useRef<ClippedDraggablesHandle>(undefined);
+
+    const clusterTimeout = useRef<number | null>(null);
+
+    const safeComputeClusters = () => {
+        if (clusterTimeout.current) clearTimeout(clusterTimeout.current);
+        clusterTimeout.current = setTimeout(() => {
+            computeVisibleClusters();
+        }, 200);
+    };
 
     return (
         <View
@@ -280,60 +385,53 @@ export default function Map() {
                     onPanDrag={() => {
                         locationColor !== "gray" && setLocationColor("gray");
                     }}
+                    onRegionChangeComplete={safeComputeClusters}
                     onPress={() => {
                         setDetailCenter(undefined);
                     }}
-                    mapPadding={
-                        Platform.OS === "android"
-                            ? {
-                                  top: safeAreaInsets.top,
-                                  right: safeAreaInsets.right + 20,
-                                  bottom: safeAreaInsets.bottom + 60,
-                                  left: safeAreaInsets.left + 20,
-                              }
-                            : {
-                                  top: 0,
-                                  right: safeAreaInsets.left + 20,
-                                  bottom: safeAreaInsets.bottom + 15,
-                                  left: safeAreaInsets.left + 20,
-                              }
-                    }
+                    mapPadding={MAP_OFFSET}
                     //@ts-ignore
                     ref={(ref) => (mapRef.current = ref)}
                     style={{ width: "100%", height: "100%" }}
                     showsMyLocationButton={false}
                     showsUserLocation
-                    onRegionChangeComplete={setRegion}
                     initialRegion={INITIAL_REGION}
                 >
-                    {displayCenters.map((center) => (
-                        <CenterMarker
-                            onPress={() => {
-                                setDetailCenter(center);
-                            }}
-                            key={center["BPHC Assigned Number"]}
-                            center={center}
-                            refFunc={createMarkerRef(
-                                center["BPHC Assigned Number"]
-                            )}
-                            selected={
-                                center["BPHC Assigned Number"] ===
-                                detailCenter?.["BPHC Assigned Number"]
-                            }
-                            coordinate={{
-                                latitude: Number(
-                                    center[
-                                        "Geocoding Artifact Address Primary Y Coordinate"
-                                    ]
-                                ),
-                                longitude: Number(
-                                    center[
-                                        "Geocoding Artifact Address Primary X Coordinate"
-                                    ]
-                                ),
-                            }}
-                        />
-                    ))}
+                    {/* {clusteredDisplayCenters.map((item) => {
+                        if (item.type === "cluster") {
+                            console.log(item);
+                            return (
+                                <ClusterMarker
+                                    key={`c-${item.coordinate.latitude}-${item.coordinate.longitude}-${item.count}`}
+                                    id={item.id}
+                                    count={item.count}
+                                    coordinate={item.coordinate}
+                                    onPress={() => {
+                                        // mapRef.current?.animateCamera({
+                                        //     center: item.coordinate,
+                                        //     zoom: camZoom + 2,
+                                        // });
+                                    }}
+                                />
+                            );
+                        }
+
+                        return (
+                            <CenterMarker
+                                key={item.id}
+                                center={item.center}
+                                selected={
+                                    item.center["BPHC Assigned Number"] ===
+                                    detailCenter?.["BPHC Assigned Number"]
+                                }
+                                onPress={() => {
+                                    setDetailCenter(item.center);
+                                }}
+                                coordinate={item.coordinate}
+                                refFunc={createMarkerRef(item.id)}
+                            />
+                        );
+                    })} */}
                 </MapView>
                 <ClippedDraggables
                     header={
@@ -358,7 +456,6 @@ export default function Map() {
                             displayCenters={displayCenters}
                             unit={unit}
                             searching={loading || searchingCenters}
-                            // markerRefs={markerRefs}
                             mapRef={mapRef}
                         />
                     }
