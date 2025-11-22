@@ -14,7 +14,7 @@ const downloadDb = async (dbFile: File) => {
         // Load the DB asset
         console.log("Loading DB")
         const asset = await Asset.loadAsync(
-            require('../assets/database/'+DB_NAME)
+            require('../assets/database/fqhc.db')
         )
         console.log(asset[0].localUri, asset[0].uri)
         const assetFile = new File(asset[0].localUri as string);

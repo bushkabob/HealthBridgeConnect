@@ -1,5 +1,7 @@
 import { BlurView } from "expo-blur";
+import { Dimensions } from "react-native";
 import Animated from "react-native-reanimated";
+import Supercluster from "supercluster";
 
 export function levenshtein(a: string, b: string): number {
     if (a === b) return 0;
@@ -42,43 +44,82 @@ export function haversineDistance(
 
 export const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
-// import supercluster from "supercluster";
+const { width, height } = Dimensions.get("screen");
 
-// const 
+export function getMinZoomForPoint(
+    lat: number,
+    lon: number,
+    id: string,
+    supercluster: Supercluster,
+    maxZoom = 20
+) {
+    for (let z = 0; z <= maxZoom; z++) {
+        const features = supercluster.getClusters([-180, -90, 180, 90], z);
+        for (let index = 0; index < features.length; index++) {
+            const val = features[index];
+            if (!val.properties.cluster && val.properties.id === id) {
+                return z;
+            }
+        }
+    }
+    return maxZoom + 1;
+}
 
-// function getZoomLevel(longitudeDelta: number) {
-//     const angle = longitudeDelta;
-//     return Math.round(Math.log(360 / angle) / Math.LN2);
-// }
+export function boundariesToZoom(boundaries: {
+    northEast: { latitude: number; longitude: number };
+    southWest: { latitude: number; longitude: number };
+}) {
+    const {
+        northEast: { latitude: latNE, longitude: lonNE },
+        southWest: { latitude: latSW, longitude: lonSW },
+    } = boundaries;
 
-// export function getCluster(places, region) {
-//     const cluster = supercluster({
-//         radius: 40,
-//         maxZoom: 16
-//     });
+    const lonDelta = Math.abs(lonNE - lonSW);
 
-//     let markers = [];
+    const zoom = Math.max(
+        0,
+        Math.min(20, Math.round(Math.log2(360 / lonDelta)))
+    );
 
-//     try {
-//         const padding = 0;
+    return zoom;
+}
 
-//         cluster.load(places);
+export function zoomToBoundaries(
+    center: { latitude: number; longitude: number },
+    zoom: number,
+    aspectRatio: number = 1 // width / height of the viewport
+): {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+} {
+    // Calculate longitude delta from zoom level
+    const lonDelta = 360 / Math.pow(2, zoom);
 
-//         markers = cluster.getClusters(
-//             [
-//                 region.longitude - region.longitudeDelta * (0.5 + padding),
-//                 region.latitude - region.latitudeDelta * (0.5 + padding),
-//                 region.longitude + region.longitudeDelta * (0.5 + padding),
-//                 region.latitude + region.latitudeDelta * (0.5 + padding)
-//             ],
-//             getZoomLevel(region.longitudeDelta)
-//         );
-//     } catch (e) {
-//         console.debug("failed to create cluster", e);
-//     }
+    // Calculate latitude delta accounting for Mercator projection
+    // Adjust for aspect ratio (wider viewports show more longitude)
+    const adjustedLonDelta = lonDelta * aspectRatio;
+    const latDelta = lonDelta / aspectRatio;
 
-//     return {
-//         markers,
-//         cluster
-//     };
-// }
+    // Account for Mercator projection distortion at different latitudes
+    const latCos = Math.cos((center.latitude * Math.PI) / 180);
+    const adjustedLatDelta = latDelta * latCos;
+
+    return {
+        west: center.longitude - adjustedLonDelta / 2,
+        south: Math.max(-85, center.latitude - adjustedLatDelta / 2),
+        east: center.longitude + adjustedLonDelta / 2,
+        north: Math.min(85, center.latitude + adjustedLatDelta / 2),
+    };
+}
+
+export function zoomFromAltitude(altitudeMeters: number, mapHeightPx: number) {
+    const earthCircumference = 40075016.686; // in meters
+    const tileSize = 256; // Web Mercator tile size
+
+    const zoom = Math.log2(
+        (earthCircumference * mapHeightPx) / (altitudeMeters * tileSize)
+    );
+    return zoom;
+}

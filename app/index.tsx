@@ -8,15 +8,22 @@ import useDatabase from "@/hooks/useDatabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useFocusEffect } from "expo-router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Dimensions, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import MapView, { MapMarker } from "react-native-maps";
+import MapView from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Supercluster from "supercluster";
 
+import CenterMarker from "@/components/CenterMarker";
+import ClusterMarker from "@/components/ClusterMarker";
 import { FQHCSite, MapCenter } from "../types/types";
-import { haversineDistance } from "./utils";
+import {
+    boundariesToZoom,
+    getMinZoomForPoint,
+    haversineDistance,
+    zoomFromAltitude,
+} from "./utils";
 
 const INITIAL_REGION = {
     latitude: 39.3669492313556,
@@ -52,7 +59,7 @@ export default function Map() {
 
     const mapRef = useRef<MapView>(null);
     // @ts-ignore
-    const markerRefs = useRef<Record<string, Marker | null>>({});
+    // const markerRefs = useRef<Record<string, Marker | null>>({});
 
     //Loads data from db
     useEffect(() => {
@@ -69,20 +76,20 @@ export default function Map() {
     }, [loading]);
 
     //Marker ref factory
-    const createMarkerRef = useCallback(
-        (id: string) => {
-            //@ts-ignore
-            return (ref: Marker | null) => {
-                if (!markerRefs || !markerRefs.current) return;
-                if (ref) {
-                    markerRefs.current[id] = ref;
-                } else {
-                    delete markerRefs.current[id];
-                }
-            };
-        },
-        [markerRefs]
-    );
+    // const createMarkerRef = useCallback(
+    //     (id: string) => {
+    //         //@ts-ignore
+    //         return (ref: Marker | null) => {
+    //             if (!markerRefs || !markerRefs.current) return;
+    //             if (ref) {
+    //                 markerRefs.current[id] = ref;
+    //             } else {
+    //                 delete markerRefs.current[id];
+    //             }
+    //         };
+    //     },
+    //     [markerRefs]
+    // );
 
     //Determines centers near location
     const determineNearbyCenters = (
@@ -153,13 +160,12 @@ export default function Map() {
         setSupercluster(sc);
     }, [displayCenters]);
 
-    const computeVisibleClusters = async () => {
-        console.log("computing superlcluster");
+    const computeVisibleClusters = async (targetZoom?: number) => {
         if (!supercluster || !mapRef.current) return;
 
         const bounds = await mapRef.current.getMapBoundaries();
-        const zoom = boundariesToZoom(bounds);
-        console.log("computed zoom:", zoom);
+        const zoom = targetZoom ? targetZoom : boundariesToZoom(bounds);
+        setPrevZoom(zoom);
 
         const worldBounds: [number, number, number, number] = [
             -180, -85, 180, 85,
@@ -190,28 +196,8 @@ export default function Map() {
                 },
             };
         });
-        console.log(formatted.length)
         setClusteredDisplayCenters(formatted);
     };
-
-    function boundariesToZoom(boundaries: {
-        northEast: { latitude: number; longitude: number };
-        southWest: { latitude: number; longitude: number };
-    }) {
-        const {
-            northEast: { latitude: latNE, longitude: lonNE },
-            southWest: { latitude: latSW, longitude: lonSW },
-        } = boundaries;
-
-        const lonDelta = Math.abs(lonNE - lonSW);
-
-        const zoom = Math.max(
-            0,
-            Math.min(20, Math.round(Math.log2(360 / lonDelta)))
-        );
-
-        return zoom;
-    }
 
     useEffect(() => {
         computeVisibleClusters();
@@ -221,11 +207,39 @@ export default function Map() {
     useEffect(() => {
         if (detailCenter !== undefined) {
             setLastValidDetailCenter(detailCenter);
-            (
-                markerRefs.current[
-                    detailCenter["BPHC Assigned Number"]
-                ] as MapMarker
-            ).showCallout();
+            const lat = Number(
+                detailCenter["Geocoding Artifact Address Primary Y Coordinate"]
+            );
+            const lon = Number(
+                detailCenter["Geocoding Artifact Address Primary X Coordinate"]
+            );
+            const minZoom = getMinZoomForPoint(
+                lat,
+                lon,
+                detailCenter["BPHC Assigned Number"],
+                supercluster!
+            );
+            
+            console.log("running")
+            mapRef.current?.getCamera().then((cam) => {
+                const currZoom = (Platform.OS === "ios" ? zoomFromAltitude(cam.altitude as number, height) : cam.zoom) as number 
+                const zoomToUse = Math.ceil(currZoom > minZoom ? currZoom : minZoom)
+                // computeVisibleClusters(zoomToUse)
+                console.log(currZoom, minZoom)
+                const lonDelta = 360 / Math.pow(2, zoomToUse);
+                const aspectRatio = width / height;
+                const latDelta = lonDelta / aspectRatio;
+                mapRef.current?.animateToRegion(
+                {
+                    latitude: lat,
+                    longitude: lon,
+                    latitudeDelta: latDelta,
+                    longitudeDelta: lonDelta,
+                },
+                300
+            );
+            })
+            
         }
         if (
             detailCenter !== undefined &&
@@ -235,7 +249,7 @@ export default function Map() {
         } else if (draggableOverlapImperatives.current !== undefined) {
             draggableOverlapImperatives.current.close();
         }
-    }, [detailCenter]);
+    }, [detailCenter, supercluster]);
 
     //Search when unit, map center, or search radius changes
     useEffect(() => {
@@ -252,39 +266,44 @@ export default function Map() {
     //Get nearby centers when map loads
     useEffect(() => {
         getCurrentLocation(async (location) => {
-            const lat = location.coords.latitude;
-            const lon = location.coords.longitude;
+            const lat = location.lat;
+            const lon = location.lon;
             setCurrentCenter({ lat: lat, lon: lon });
-            moveToLocation(location);
+            moveToLocation({ lat: lat, lon: lon });
         });
     }, [allCenters]);
 
     //Moves map to provided location
-    const moveToLocation = (location: Location.LocationObject) => {
+    const moveToLocation = (
+        location: { lat: number; lon: number },
+        deltas?: { latDelta: number; lonDelta: number }
+    ) => {
+        const latDelta = deltas ? deltas.latDelta : 0.1;
+        const lonDelta = deltas ? deltas.lonDelta : 0.1;
         if (mapRef.current !== undefined && mapRef.current !== null) {
             setLocationColor("#60b1fc");
             mapRef.current.animateToRegion(
                 {
-                    latitude: location.coords.latitude,
-                    longitude: location.coords.longitude,
-                    latitudeDelta: 0.1,
-                    longitudeDelta: 0.1,
+                    latitude: location.lat,
+                    longitude: location.lon,
+                    latitudeDelta: latDelta,
+                    longitudeDelta: lonDelta,
                 },
                 1000
             );
             currentCenter !== undefined &&
-                (location.coords.latitude !== currentCenter.lat ||
-                    location.coords.longitude !== currentCenter.lon) &&
+                (location.lat !== currentCenter.lat ||
+                    location.lon !== currentCenter.lon) &&
                 setCurrentCenter({
-                    lat: location.coords.latitude,
-                    lon: location.coords.longitude,
+                    lat: location.lat,
+                    lon: location.lon,
                 });
         }
     };
 
     //Gets the users current location
     async function getCurrentLocation(
-        callback?: (location: Location.LocationObject) => void
+        callback?: (location: { lat: number; lon: number }) => void
     ) {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
@@ -292,7 +311,11 @@ export default function Map() {
             return;
         }
         const location = await Location.getCurrentPositionAsync({});
-        callback && callback(location);
+        callback &&
+            callback({
+                lat: location.coords.latitude,
+                lon: location.coords.longitude,
+            });
     }
 
     //Calls the function for loading user prefs
@@ -349,7 +372,7 @@ export default function Map() {
                   left: safeAreaInsets.left + 20,
               }
             : {
-                  top: 0,
+                  top: safeAreaInsets.top,
                   right: safeAreaInsets.left + 20,
                   bottom: safeAreaInsets.bottom + 15,
                   left: safeAreaInsets.left + 20,
@@ -359,12 +382,23 @@ export default function Map() {
         useRef<ClippedDraggablesHandle>(undefined);
 
     const clusterTimeout = useRef<number | null>(null);
+    const [prevZoom, setPrevZoom] = useState<number>(0);
 
-    const safeComputeClusters = () => {
-        if (clusterTimeout.current) clearTimeout(clusterTimeout.current);
-        clusterTimeout.current = setTimeout(() => {
-            computeVisibleClusters();
-        }, 200);
+    const safeComputeClusters = async () => {
+        const boundaries = await mapRef.current?.getMapBoundaries();
+        if (boundaries) {
+            const zoom = boundariesToZoom(boundaries);
+            if (zoom !== prevZoom) {
+                if (clusterTimeout.current)
+                    clearTimeout(clusterTimeout.current);
+                clusterTimeout.current = setTimeout(() => {
+                    computeVisibleClusters();
+                }, 200);
+            } else {
+                if (clusterTimeout.current)
+                    clearTimeout(clusterTimeout.current);
+            }
+        }
     };
 
     return (
@@ -397,9 +431,8 @@ export default function Map() {
                     showsUserLocation
                     initialRegion={INITIAL_REGION}
                 >
-                    {/* {clusteredDisplayCenters.map((item) => {
+                    {clusteredDisplayCenters.map((item) => {
                         if (item.type === "cluster") {
-                            console.log(item);
                             return (
                                 <ClusterMarker
                                     key={`c-${item.coordinate.latitude}-${item.coordinate.longitude}-${item.count}`}
@@ -407,10 +440,24 @@ export default function Map() {
                                     count={item.count}
                                     coordinate={item.coordinate}
                                     onPress={() => {
-                                        // mapRef.current?.animateCamera({
-                                        //     center: item.coordinate,
-                                        //     zoom: camZoom + 2,
-                                        // });
+                                        const expansionZoom =
+                                            supercluster!.getClusterExpansionZoom(
+                                                item.id
+                                            );
+                                        const lonDelta =
+                                            360 / Math.pow(2, expansionZoom);
+                                        const aspectRatio = width / height;
+                                        const latDelta = lonDelta / aspectRatio;
+                                        moveToLocation(
+                                            {
+                                                lat: item.coordinate.latitude,
+                                                lon: item.coordinate.longitude,
+                                            },
+                                            {
+                                                latDelta: latDelta,
+                                                lonDelta: lonDelta,
+                                            }
+                                        );
                                     }}
                                 />
                             );
@@ -428,10 +475,9 @@ export default function Map() {
                                     setDetailCenter(item.center);
                                 }}
                                 coordinate={item.coordinate}
-                                refFunc={createMarkerRef(item.id)}
                             />
                         );
-                    })} */}
+                    })}
                 </MapView>
                 <ClippedDraggables
                     header={
@@ -456,7 +502,6 @@ export default function Map() {
                             displayCenters={displayCenters}
                             unit={unit}
                             searching={loading || searchingCenters}
-                            mapRef={mapRef}
                         />
                     }
                     topContent={
@@ -465,13 +510,6 @@ export default function Map() {
                                 close={
                                     draggableOverlapImperatives.current
                                         ? () => {
-                                              (
-                                                  markerRefs.current[
-                                                      lastValidDetailCenter[
-                                                          "BPHC Assigned Number"
-                                                      ]
-                                                  ] as MapMarker
-                                              ).hideCallout();
                                               draggableOverlapImperatives.current &&
                                                   draggableOverlapImperatives.current.close();
                                               setDetailCenter(undefined);

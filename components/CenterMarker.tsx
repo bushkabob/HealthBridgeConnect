@@ -1,17 +1,14 @@
 import { FQHCSite } from "@/types/types";
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect } from "react";
 import { View } from "react-native";
-import { LatLng, Marker } from "react-native-maps";
+import { LatLng, MarkerAnimated } from "react-native-maps";
 import Animated, {
     useAnimatedStyle,
-    useSharedValue,
-    withTiming,
+    useSharedValue
 } from "react-native-reanimated";
 
 interface CenterMarkerProps {
     center: FQHCSite;
-    refFunc: any;
     onPress: Function;
     selected: boolean;
     coordinate: LatLng
@@ -21,11 +18,11 @@ const CenterMarker = (props: CenterMarkerProps) => {
     // Reanimated shared value
     const scale = useSharedValue(1);
 
-    useEffect(() => {
-        scale.value = withTiming(props.selected ? 1.5 : 1, {
-            duration: 120,
-        });
-    }, [props.selected]);
+    // useEffect(() => {
+    //     scale.value = withTiming(props.selected ? 1.5 : 1, {
+    //         duration: 120,
+    //     });
+    // }, [props.selected]);
 
     // Reanimated style
     const animatedStyle = useAnimatedStyle(() => {
@@ -35,15 +32,15 @@ const CenterMarker = (props: CenterMarkerProps) => {
     });
 
     return (
-        <Marker
-            onPress={(e) => {
+        <MarkerAnimated
+            onPress={(e: any) => {
                 props.onPress();
                 e.stopPropagation();
                 e.preventDefault()
             }}
+            tracksViewChanges={false}
             key={props.center["BPHC Assigned Number"]}
             id={props.center["BPHC Assigned Number"]}
-            ref={(ref: any) => props.refFunc(ref)}
             coordinate={props.coordinate}
         >
             {/* FIX: Stable bounding box wrapper */}
@@ -83,7 +80,7 @@ const CenterMarker = (props: CenterMarkerProps) => {
                     />
                 </Animated.View>
             </View>
-        </Marker>
+        </MarkerAnimated>
     );
 };
 
