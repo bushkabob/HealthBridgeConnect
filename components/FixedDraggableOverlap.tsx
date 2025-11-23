@@ -15,7 +15,7 @@ import Animated, {
     useAnimatedStyle,
     useDerivedValue,
     useSharedValue,
-    withTiming,
+    withTiming
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

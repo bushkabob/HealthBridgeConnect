@@ -34,6 +34,8 @@ const INITIAL_REGION = {
 
 const { width, height } = Dimensions.get("window");
 
+const currentOffset = -0.2;
+
 export default function Map() {
     const [locationColor, setLocationColor] = useState<string>("gray");
 
@@ -56,10 +58,7 @@ export default function Map() {
     >([]);
 
     const { loading, query } = useDatabase();
-
     const mapRef = useRef<MapView>(null);
-    // @ts-ignore
-    // const markerRefs = useRef<Record<string, Marker | null>>({});
 
     //Loads data from db
     useEffect(() => {
@@ -74,22 +73,6 @@ export default function Map() {
             }
         }
     }, [loading]);
-
-    //Marker ref factory
-    // const createMarkerRef = useCallback(
-    //     (id: string) => {
-    //         //@ts-ignore
-    //         return (ref: Marker | null) => {
-    //             if (!markerRefs || !markerRefs.current) return;
-    //             if (ref) {
-    //                 markerRefs.current[id] = ref;
-    //             } else {
-    //                 delete markerRefs.current[id];
-    //             }
-    //         };
-    //     },
-    //     [markerRefs]
-    // );
 
     //Determines centers near location
     const determineNearbyCenters = (
@@ -213,33 +196,44 @@ export default function Map() {
             const lon = Number(
                 detailCenter["Geocoding Artifact Address Primary X Coordinate"]
             );
+
             const minZoom = getMinZoomForPoint(
                 lat,
                 lon,
                 detailCenter["BPHC Assigned Number"],
                 supercluster!
             );
-            
-            console.log("running")
+
             mapRef.current?.getCamera().then((cam) => {
-                const currZoom = (Platform.OS === "ios" ? zoomFromAltitude(cam.altitude as number, height) : cam.zoom) as number 
-                const zoomToUse = Math.ceil(currZoom > minZoom ? currZoom : minZoom)
+                const currZoom = (
+                    Platform.OS === "ios"
+                        ? zoomFromAltitude(cam.altitude as number, height)
+                        : cam.zoom
+                ) as number;
+                const zoomToUse = Math.ceil(
+                    currZoom > minZoom ? currZoom : minZoom
+                );
                 // computeVisibleClusters(zoomToUse)
-                console.log(currZoom, minZoom)
                 const lonDelta = 360 / Math.pow(2, zoomToUse);
                 const aspectRatio = width / height;
                 const latDelta = lonDelta / aspectRatio;
-                mapRef.current?.animateToRegion(
-                {
-                    latitude: lat,
-                    longitude: lon,
-                    latitudeDelta: latDelta,
-                    longitudeDelta: lonDelta,
-                },
-                300
-            );
-            })
-            
+                mapRef.current
+                    ?.getMapBoundaries()
+                    .then((currentFrame) =>
+                        moveToLocation(
+                            {
+                                lat:
+                                    lat +
+                                    currentOffset *
+                                        (currentFrame.northEast.latitude -
+                                            currentFrame.southWest.latitude),
+                                lon: lon,
+                            },
+                            false,
+                            { latDelta: latDelta, lonDelta: lonDelta }
+                        )
+                    );
+            });
         }
         if (
             detailCenter !== undefined &&
@@ -261,21 +255,21 @@ export default function Map() {
                 currentCenter.lat,
                 currentCenter.lon
             );
-    }, [searchRadius, unit, currentCenter]);
+    }, [allCenters, searchRadius, unit, currentCenter]);
 
     //Get nearby centers when map loads
     useEffect(() => {
         getCurrentLocation(async (location) => {
             const lat = location.lat;
             const lon = location.lon;
-            setCurrentCenter({ lat: lat, lon: lon });
-            moveToLocation({ lat: lat, lon: lon });
+            moveToLocation({ lat: lat, lon: lon }, true);
         });
     }, [allCenters]);
 
     //Moves map to provided location
     const moveToLocation = (
         location: { lat: number; lon: number },
+        shouldSetLocation: boolean,
         deltas?: { latDelta: number; lonDelta: number }
     ) => {
         const latDelta = deltas ? deltas.latDelta : 0.1;
@@ -291,9 +285,10 @@ export default function Map() {
                 },
                 1000
             );
-            currentCenter !== undefined &&
+            (currentCenter === undefined ||
                 (location.lat !== currentCenter.lat ||
-                    location.lon !== currentCenter.lon) &&
+                    location.lon !== currentCenter.lon)) &&
+                shouldSetLocation &&
                 setCurrentCenter({
                     lat: location.lat,
                     lon: location.lon,
@@ -303,7 +298,7 @@ export default function Map() {
 
     //Gets the users current location
     async function getCurrentLocation(
-        callback?: (location: { lat: number; lon: number }) => void
+        callback?: (location: { lat: number; lon: number }, shouldSetLocation: boolean) => void
     ) {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
@@ -315,7 +310,7 @@ export default function Map() {
             callback({
                 lat: location.coords.latitude,
                 lon: location.coords.longitude,
-            });
+            }, true);
     }
 
     //Calls the function for loading user prefs
@@ -453,6 +448,7 @@ export default function Map() {
                                                 lat: item.coordinate.latitude,
                                                 lon: item.coordinate.longitude,
                                             },
+                                            false,
                                             {
                                                 latDelta: latDelta,
                                                 lonDelta: lonDelta,
@@ -468,7 +464,7 @@ export default function Map() {
                                 key={item.id}
                                 center={item.center}
                                 selected={
-                                    item.center["BPHC Assigned Number"] ===
+                                    item.id ===
                                     detailCenter?.["BPHC Assigned Number"]
                                 }
                                 onPress={() => {

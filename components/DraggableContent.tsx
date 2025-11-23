@@ -82,7 +82,6 @@ const DraggableContent = (props: DraggableContentProps) => {
     //Debounced search
     useEffect(() => {
         if (props.allCenters.length === 0) return;
-
         // create a timeout
         const handler = setTimeout(() => {
             if (searchValue === "") {

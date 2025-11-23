@@ -65,6 +65,23 @@ export function getMinZoomForPoint(
     return maxZoom + 1;
 }
 
+export function getMinZoomsForIds(
+    id: string,
+    supercluster: Supercluster,
+    maxZoom = 20
+) {
+    for (let z = 0; z <= maxZoom; z++) {
+        const features = supercluster.getClusters([-180, -90, 180, 90], z);
+        for (let index = 0; index < features.length; index++) {
+            const val = features[index];
+            if (!val.properties.cluster && val.properties.id === id) {
+                return z;
+            }
+        }
+    }
+    return maxZoom + 1;
+}
+
 export function boundariesToZoom(boundaries: {
     northEast: { latitude: number; longitude: number };
     southWest: { latitude: number; longitude: number };

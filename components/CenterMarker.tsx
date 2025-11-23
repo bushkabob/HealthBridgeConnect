@@ -1,86 +1,85 @@
 import { FQHCSite } from "@/types/types";
 import { Ionicons } from "@expo/vector-icons";
+import { useEffect } from "react";
 import { View } from "react-native";
-import { LatLng, MarkerAnimated } from "react-native-maps";
+import { LatLng, Marker } from "react-native-maps";
 import Animated, {
     useAnimatedStyle,
-    useSharedValue
+    useSharedValue,
+    withTiming
 } from "react-native-reanimated";
 
 interface CenterMarkerProps {
     center: FQHCSite;
     onPress: Function;
     selected: boolean;
-    coordinate: LatLng
+    coordinate: LatLng;
+    key: string;
 }
+
+const AniamtedIcon = Animated.createAnimatedComponent(Ionicons)
 
 const CenterMarker = (props: CenterMarkerProps) => {
     // Reanimated shared value
     const scale = useSharedValue(1);
-
-    // useEffect(() => {
-    //     scale.value = withTiming(props.selected ? 1.5 : 1, {
-    //         duration: 120,
-    //     });
-    // }, [props.selected]);
-
     // Reanimated style
     const animatedStyle = useAnimatedStyle(() => {
         return {
-            transform: [{ scale: scale.value }]
+            height: scale.value * 40,
+            width: scale.value * 40,
+            borderWidth: scale.value * 2
         };
     });
 
+    const animatedProps = useAnimatedStyle(() => {
+        return {
+            transform: [{ scale: scale.value }]
+        }
+    })
+
+    useEffect(() => {
+        scale.value = props.selected ? withTiming(1.5) : withTiming(1)
+    }, [props.selected])
+
     return (
-        <MarkerAnimated
+        <Marker
             onPress={(e: any) => {
                 props.onPress();
                 e.stopPropagation();
-                e.preventDefault()
+                e.preventDefault();
             }}
-            tracksViewChanges={false}
             key={props.center["BPHC Assigned Number"]}
             id={props.center["BPHC Assigned Number"]}
             coordinate={props.coordinate}
         >
             {/* FIX: Stable bounding box wrapper */}
-            <View
+            {/* <View
                 style={{
                     width: 60,
                     height: 70,
                     alignItems: "center",
                     justifyContent: "center",
                 }}
-            >
-                <Animated.View style={[{ alignItems: "center" }, animatedStyle]}>
-                    <View
-                        style={{
+            > */}
+                <View
+                    style={[{ alignItems: "center", justifyContent: "center", width: 60, height: 60 }]}
+                >
+                    <Animated.View
+                        style={[{
                             width: 40,
                             height: 40,
-                            borderRadius: 20,
+                            borderRadius: 60,
                             backgroundColor: "red",
-                            borderWidth: 2,
                             borderColor: "white",
                             alignItems: "center",
                             justifyContent: "center",
-                        }}
+                            
+                        }, animatedStyle]}
                     >
-                        <Ionicons name="medical" size={22} color="white" />
-                    </View>
-
-                    <View
-                        style={{
-                            width: 10,
-                            height: 10,
-                            borderLeftColor: "transparent",
-                            borderRightColor: "transparent",
-                            borderTopColor: "white",
-                            marginTop: -2,
-                        }}
-                    />
-                </Animated.View>
-            </View>
-        </MarkerAnimated>
+                        <AniamtedIcon name="medical" style={animatedProps} size={22} color="white" />
+                    </Animated.View>
+                </View>
+        </Marker>
     );
 };
 
