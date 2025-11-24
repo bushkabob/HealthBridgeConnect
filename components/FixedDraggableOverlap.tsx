@@ -12,6 +12,7 @@ import Animated, {
     Extrapolation,
     interpolate,
     runOnJS,
+    useAnimatedReaction,
     useAnimatedStyle,
     useDerivedValue,
     useSharedValue,
@@ -23,6 +24,8 @@ interface ClippedDraggablesProps {
     clippedContent: ReactElement;
     header?: ReactElement;
     topContent: ReactElement;
+    setUseOffset: Function
+    useOffset: boolean
     ref: RefObject<ClippedDraggablesHandle | undefined>;
 }
 
@@ -171,6 +174,14 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
         };
     });
 
+    const setOffset = () => {
+        bottomTranslateY.value !== SNAP_BOTTOM ? (!props.useOffset && props.setUseOffset(true)) : (props.useOffset && props.setUseOffset(false))
+    }
+
+    useAnimatedReaction(() => bottomTranslateY.value, () => {
+        runOnJS(setOffset)()
+    })
+
     useImperativeHandle(props.ref, () => ({
         open: () => {
             detailSheetY.value = withTiming(
@@ -294,7 +305,6 @@ const ClippedDraggables = (props: ClippedDraggablesProps) => {
             >
                 <FixedDraggable
                     content={props.topContent}
-                    // defaultPosition={0.5}
                     translateY={topTranslateY}
                     progress={topProgress}
                     scaleRange={scaleRange}

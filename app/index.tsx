@@ -13,15 +13,16 @@ import { Dimensions, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Supercluster from "supercluster";
 
 import CenterMarker from "@/components/CenterMarker";
 import ClusterMarker from "@/components/ClusterMarker";
+import SpiderfyCluster, { determineDeltas } from "@/components/SpiderfyCluster";
+import useSupercluster from "@/hooks/useSuperCluster";
 import { FQHCSite, MapCenter } from "../types/types";
 import {
-    boundariesToZoom,
     getMinZoomForPoint,
     haversineDistance,
+    useAwaitableMapAnimation,
     zoomFromAltitude,
 } from "./utils";
 
@@ -35,6 +36,8 @@ const INITIAL_REGION = {
 const { width, height } = Dimensions.get("window");
 
 const currentOffset = -0.2;
+
+const MAX_ZOOM = 20;
 
 export default function Map() {
     const [locationColor, setLocationColor] = useState<string>("gray");
@@ -51,14 +54,25 @@ export default function Map() {
     const [searchRadius, setSearchRadius] = useState<number>(10);
     const [unit, setUnit] = useState<string>("Imperial");
     const [searchingCenters, setSearchingCenters] = useState<boolean>(false);
-
-    const [supercluster, setSupercluster] = useState<Supercluster>();
-    const [clusteredDisplayCenters, setClusteredDisplayCenters] = useState<
-        any[]
-    >([]);
+    const [useOffset, setUseOffset] = useState(false);
 
     const { loading, query } = useDatabase();
     const mapRef = useRef<MapView>(null);
+
+    const { animateToRegionAsync, onRegionChangeCompleteHandler } =
+        useAwaitableMapAnimation(mapRef);
+
+    const {
+        supercluster,
+        clusteredDisplayCenters,
+        computeVisibleClusters,
+        safeComputeClusters,
+        // prevZoom,
+        spiderfy,
+        unspiderfy,
+        spiderfiedClusterId,
+        spiderfiedLeaves,
+    } = useSupercluster(displayCenters, mapRef);
 
     //Loads data from db
     useEffect(() => {
@@ -108,85 +122,9 @@ export default function Map() {
     useEffect(() => {
         !loading && setSearchingCenters(false);
         //Super cluster
-        if (!displayCenters || displayCenters.length === 0) {
-            setSupercluster(undefined);
-            setClusteredDisplayCenters([]);
-            return;
-        }
-
-        const points = displayCenters.map((item) => ({
-            type: "Feature" as "Feature",
-            properties: {
-                cluster: false,
-                id: item["BPHC Assigned Number"],
-                raw: item,
-            },
-            geometry: {
-                type: "Point" as "Point",
-                coordinates: [
-                    Number(
-                        item["Geocoding Artifact Address Primary X Coordinate"]
-                    ),
-                    Number(
-                        item["Geocoding Artifact Address Primary Y Coordinate"]
-                    ),
-                ],
-            },
-        }));
-
-        const sc = new Supercluster({
-            radius: 60,
-            maxZoom: 20,
-        });
-
-        sc.load(points);
-        setSupercluster(sc);
     }, [displayCenters]);
 
-    const computeVisibleClusters = async (targetZoom?: number) => {
-        if (!supercluster || !mapRef.current) return;
-
-        const bounds = await mapRef.current.getMapBoundaries();
-        const zoom = targetZoom ? targetZoom : boundariesToZoom(bounds);
-        setPrevZoom(zoom);
-
-        const worldBounds: [number, number, number, number] = [
-            -180, -85, 180, 85,
-        ];
-
-        const clusters = supercluster.getClusters(worldBounds, zoom);
-
-        const formatted = clusters.map((item) => {
-            if (item.properties.cluster) {
-                return {
-                    type: "cluster",
-                    id: item.id,
-                    count: item.properties.point_count,
-                    coordinate: {
-                        latitude: item.geometry.coordinates[1],
-                        longitude: item.geometry.coordinates[0],
-                    },
-                };
-            }
-
-            return {
-                type: "center",
-                id: item.properties.id,
-                center: item.properties.raw,
-                coordinate: {
-                    latitude: item.geometry.coordinates[1],
-                    longitude: item.geometry.coordinates[0],
-                },
-            };
-        });
-        setClusteredDisplayCenters(formatted);
-    };
-
-    useEffect(() => {
-        computeVisibleClusters();
-    }, [supercluster]);
-
-    //Show callout when detailCenter is set
+    //Move to detail center when it is selected
     useEffect(() => {
         if (detailCenter !== undefined) {
             setLastValidDetailCenter(detailCenter);
@@ -204,6 +142,8 @@ export default function Map() {
                 supercluster!
             );
 
+            const minZoomMod = minZoom < MAX_ZOOM ? minZoom + 1 : minZoom;
+
             mapRef.current?.getCamera().then((cam) => {
                 const currZoom = (
                     Platform.OS === "ios"
@@ -211,28 +151,45 @@ export default function Map() {
                         : cam.zoom
                 ) as number;
                 const zoomToUse = Math.ceil(
-                    currZoom > minZoom ? currZoom : minZoom
+                    currZoom > minZoomMod ? currZoom : minZoomMod
                 );
-                // computeVisibleClusters(zoomToUse)
                 const lonDelta = 360 / Math.pow(2, zoomToUse);
                 const aspectRatio = width / height;
                 const latDelta = lonDelta / aspectRatio;
-                mapRef.current
-                    ?.getMapBoundaries()
-                    .then((currentFrame) =>
-                        moveToLocation(
-                            {
-                                lat:
-                                    lat +
-                                    currentOffset *
-                                        (currentFrame.northEast.latitude -
-                                            currentFrame.southWest.latitude),
-                                lon: lon,
-                            },
-                            false,
-                            { latDelta: latDelta, lonDelta: lonDelta }
-                        )
+                const center = spiderfiedLeaves.filter(
+                    (val) =>
+                        val.center["BPHC Assigned Number"] ===
+                        detailCenter["BPHC Assigned Number"]
+                );
+                var latOffset = 0;
+                var lonOffset = 0;
+                console.log(
+                    center.length,
+                    detailCenter["BPHC Assigned Number"]
+                );
+                if (center.length > 0) {
+                    const index = spiderfiedLeaves.findIndex(
+                        (val) =>
+                            val.center["BPHC Assigned Number"] ===
+                            detailCenter["BPHC Assigned Number"]
                     );
+                    const { deltaLat, deltaLon } = determineDeltas(
+                        spiderfiedLeaves.length,
+                        index,
+                        center[0].coordinate.latitude,
+                        10
+                    );
+                    latOffset += deltaLat;
+                    lonOffset += deltaLon;
+                }
+                moveToLocation(
+                    {
+                        lat: lat + currentOffset * latDelta + latOffset,
+                        lon: lon + lonOffset,
+                    },
+                    false,
+                    { latDelta: latDelta, lonDelta: lonDelta }
+                );
             });
         }
         if (
@@ -243,7 +200,7 @@ export default function Map() {
         } else if (draggableOverlapImperatives.current !== undefined) {
             draggableOverlapImperatives.current.close();
         }
-    }, [detailCenter, supercluster]);
+    }, [detailCenter, supercluster, spiderfiedLeaves]);
 
     //Search when unit, map center, or search radius changes
     useEffect(() => {
@@ -286,8 +243,8 @@ export default function Map() {
                 1000
             );
             (currentCenter === undefined ||
-                (location.lat !== currentCenter.lat ||
-                    location.lon !== currentCenter.lon)) &&
+                location.lat !== currentCenter.lat ||
+                location.lon !== currentCenter.lon) &&
                 shouldSetLocation &&
                 setCurrentCenter({
                     lat: location.lat,
@@ -298,7 +255,10 @@ export default function Map() {
 
     //Gets the users current location
     async function getCurrentLocation(
-        callback?: (location: { lat: number; lon: number }, shouldSetLocation: boolean) => void
+        callback?: (
+            location: { lat: number; lon: number },
+            shouldSetLocation: boolean
+        ) => void
     ) {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
@@ -307,10 +267,13 @@ export default function Map() {
         }
         const location = await Location.getCurrentPositionAsync({});
         callback &&
-            callback({
-                lat: location.coords.latitude,
-                lon: location.coords.longitude,
-            }, true);
+            callback(
+                {
+                    lat: location.coords.latitude,
+                    lon: location.coords.longitude,
+                },
+                true
+            );
     }
 
     //Calls the function for loading user prefs
@@ -376,26 +339,6 @@ export default function Map() {
     const draggableOverlapImperatives =
         useRef<ClippedDraggablesHandle>(undefined);
 
-    const clusterTimeout = useRef<number | null>(null);
-    const [prevZoom, setPrevZoom] = useState<number>(0);
-
-    const safeComputeClusters = async () => {
-        const boundaries = await mapRef.current?.getMapBoundaries();
-        if (boundaries) {
-            const zoom = boundariesToZoom(boundaries);
-            if (zoom !== prevZoom) {
-                if (clusterTimeout.current)
-                    clearTimeout(clusterTimeout.current);
-                clusterTimeout.current = setTimeout(() => {
-                    computeVisibleClusters();
-                }, 200);
-            } else {
-                if (clusterTimeout.current)
-                    clearTimeout(clusterTimeout.current);
-            }
-        }
-    };
-
     return (
         <View
             style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
@@ -414,7 +357,10 @@ export default function Map() {
                     onPanDrag={() => {
                         locationColor !== "gray" && setLocationColor("gray");
                     }}
-                    onRegionChangeComplete={safeComputeClusters}
+                    onRegionChangeComplete={() => {
+                        onRegionChangeCompleteHandler();
+                        safeComputeClusters();
+                    }}
                     onPress={() => {
                         setDetailCenter(undefined);
                     }}
@@ -428,54 +374,98 @@ export default function Map() {
                 >
                     {clusteredDisplayCenters.map((item) => {
                         if (item.type === "cluster") {
+                            if (spiderfiedClusterId?.id === item.id) {
+                                return (
+                                    <SpiderfyCluster
+                                        expanded={true}
+                                        origin={{
+                                            latitude: spiderfiedClusterId.lat,
+                                            longitude: spiderfiedClusterId.lon,
+                                        }}
+                                        key={"Spider"}
+                                        items={spiderfiedLeaves}
+                                        radius={10}
+                                        duration={300}
+                                        onPress={setDetailCenter}
+                                        onCollapseEnd={unspiderfy}
+                                        selected={
+                                            detailCenter?.[
+                                                "BPHC Assigned Number"
+                                            ]
+                                        }
+                                    />
+                                );
+                            } else {
+                                return (
+                                    <ClusterMarker
+                                        key={`c-${item.coordinate.latitude}-${item.coordinate.longitude}-${item.count}`}
+                                        id={item.id}
+                                        count={item.count}
+                                        coordinate={item.coordinate}
+                                        isSpiderfied={false}
+                                        onPress={() => {
+                                            const expansionZoom =
+                                                supercluster!.getClusterExpansionZoom(
+                                                    item.id
+                                                );
+                                            const zoom =
+                                                expansionZoom > MAX_ZOOM
+                                                    ? MAX_ZOOM
+                                                    : expansionZoom;
+                                            const lonDelta =
+                                                360 / Math.pow(2, zoom);
+                                            const aspectRatio = width / height;
+                                            const latDelta =
+                                                lonDelta / aspectRatio;
+                                            computeVisibleClusters(zoom);
+                                            animateToRegionAsync({
+                                                latitude:
+                                                    item.coordinate.latitude +
+                                                    latDelta *
+                                                        (useOffset
+                                                            ? currentOffset
+                                                            : 0),
+                                                longitude:
+                                                    item.coordinate.longitude,
+                                                latitudeDelta: latDelta,
+                                                longitudeDelta: lonDelta,
+                                            }).then(() => {
+                                                if (expansionZoom > MAX_ZOOM) {
+                                                    unspiderfy();
+                                                    spiderfy(
+                                                        item.id,
+                                                        item.coordinate
+                                                            .latitude,
+                                                        item.coordinate
+                                                            .longitude
+                                                    );
+                                                }
+                                            });
+                                        }}
+                                    />
+                                );
+                            }
+                        } else if (item.type === "center") {
                             return (
-                                <ClusterMarker
-                                    key={`c-${item.coordinate.latitude}-${item.coordinate.longitude}-${item.count}`}
-                                    id={item.id}
-                                    count={item.count}
-                                    coordinate={item.coordinate}
+                                <CenterMarker
+                                    key={item.id}
+                                    center={item.center}
+                                    selected={
+                                        item.id ===
+                                        detailCenter?.["BPHC Assigned Number"]
+                                    }
                                     onPress={() => {
-                                        const expansionZoom =
-                                            supercluster!.getClusterExpansionZoom(
-                                                item.id
-                                            );
-                                        const lonDelta =
-                                            360 / Math.pow(2, expansionZoom);
-                                        const aspectRatio = width / height;
-                                        const latDelta = lonDelta / aspectRatio;
-                                        moveToLocation(
-                                            {
-                                                lat: item.coordinate.latitude,
-                                                lon: item.coordinate.longitude,
-                                            },
-                                            false,
-                                            {
-                                                latDelta: latDelta,
-                                                lonDelta: lonDelta,
-                                            }
-                                        );
+                                        setDetailCenter(item.center);
                                     }}
+                                    coordinate={item.coordinate}
                                 />
                             );
                         }
-
-                        return (
-                            <CenterMarker
-                                key={item.id}
-                                center={item.center}
-                                selected={
-                                    item.id ===
-                                    detailCenter?.["BPHC Assigned Number"]
-                                }
-                                onPress={() => {
-                                    setDetailCenter(item.center);
-                                }}
-                                coordinate={item.coordinate}
-                            />
-                        );
                     })}
                 </MapView>
                 <ClippedDraggables
+                    useOffset={useOffset}
+                    setUseOffset={setUseOffset}
                     header={
                         <DraggableHeader
                             loading={!searchingCenters && !loading}

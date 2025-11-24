@@ -15,9 +15,11 @@ interface CenterMarkerProps {
     selected: boolean;
     coordinate: LatLng;
     key: string;
+    animateProps?: any
 }
 
 const AniamtedIcon = Animated.createAnimatedComponent(Ionicons)
+const AnimatedMarker = Animated.createAnimatedComponent(Marker)
 
 const CenterMarker = (props: CenterMarkerProps) => {
     // Reanimated shared value
@@ -42,7 +44,7 @@ const CenterMarker = (props: CenterMarkerProps) => {
     }, [props.selected])
 
     return (
-        <Marker
+        <AnimatedMarker
             onPress={(e: any) => {
                 props.onPress();
                 e.stopPropagation();
@@ -51,16 +53,8 @@ const CenterMarker = (props: CenterMarkerProps) => {
             key={props.center["BPHC Assigned Number"]}
             id={props.center["BPHC Assigned Number"]}
             coordinate={props.coordinate}
+            animatedProps={props.animateProps}
         >
-            {/* FIX: Stable bounding box wrapper */}
-            {/* <View
-                style={{
-                    width: 60,
-                    height: 70,
-                    alignItems: "center",
-                    justifyContent: "center",
-                }}
-            > */}
                 <View
                     style={[{ alignItems: "center", justifyContent: "center", width: 60, height: 60 }]}
                 >
@@ -79,7 +73,7 @@ const CenterMarker = (props: CenterMarkerProps) => {
                         <AniamtedIcon name="medical" style={animatedProps} size={22} color="white" />
                     </Animated.View>
                 </View>
-        </Marker>
+        </AnimatedMarker>
     );
 };
 

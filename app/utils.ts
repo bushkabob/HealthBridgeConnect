@@ -1,5 +1,6 @@
 import { BlurView } from "expo-blur";
 import { Dimensions } from "react-native";
+import MapView, { Region } from "react-native-maps";
 import Animated from "react-native-reanimated";
 import Supercluster from "supercluster";
 
@@ -139,4 +140,69 @@ export function zoomFromAltitude(altitudeMeters: number, mapHeightPx: number) {
         (earthCircumference * mapHeightPx) / (altitudeMeters * tileSize)
     );
     return zoom;
+}
+
+import { useRef } from "react";
+
+type Resolver = (() => void) | null;
+
+export function useAwaitableMapAnimation(
+    mapRef: React.RefObject<MapView | null>,
+    defaultTimeout = 1200 // ms safety timeout
+) {
+    const resolverRef = useRef<Resolver>(null);
+    const timeoutRef = useRef<number | null>(null);
+    const isWaitingRef = useRef(false);
+
+    const cleanup = () => {
+        // Clear active resolver
+        resolverRef.current = null;
+
+        // Clear timeout
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+
+        isWaitingRef.current = false;
+    };
+
+    const animateToRegionAsync = (
+        region: Region,
+        duration = 500,
+        timeout = defaultTimeout
+    ) => {
+        // Ensure no overlapping animations
+        cleanup();
+
+        return new Promise<void>((resolve) => {
+            isWaitingRef.current = true;
+            resolverRef.current = resolve;
+
+            mapRef.current?.animateToRegion(region, duration);
+
+            // Safety timeout in case onRegionChangeComplete never fires
+            timeoutRef.current = setTimeout(() => {
+                if (isWaitingRef.current && resolverRef.current) {
+                    resolverRef.current(); // resolve anyway
+                }
+                cleanup();
+            }, timeout);
+        });
+    };
+
+    // MUST be passed to <MapView onRegionChangeComplete={...} />
+    const onRegionChangeCompleteHandler = () => {
+        if (!isWaitingRef.current) return;
+
+        if (resolverRef.current) {
+            resolverRef.current(); // resolve the await call
+        }
+        cleanup();
+    };
+
+    return {
+        animateToRegionAsync,
+        onRegionChangeCompleteHandler,
+    };
 }
