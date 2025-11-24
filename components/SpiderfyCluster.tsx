@@ -11,7 +11,7 @@ import ClusterMarker from "./ClusterMarker";
 type Props = {
     origin: { latitude: number; longitude: number };
     items: Center[];
-    radius: number; // meters
+    radius: number;
     duration: number;
     expanded: boolean;
     onPress: Function;
@@ -19,62 +19,63 @@ type Props = {
     onCollapseEnd?: () => void;
 };
 
-export const determineDeltas = (numberOfItems: number, index: number, originLat: number, radius: number) => {
-    console.log(numberOfItems,index,  originLat, radius)
+export const determineDeltas = (
+    numberOfItems: number,
+    index: number,
+    originLat: number,
+    radius: number
+) => {
+    console.log(numberOfItems, index, originLat, radius);
     const angleStep = (2 * Math.PI) / numberOfItems;
     const earthMetersPerDegreeLat = 111_320; // ~ meters per 1 lat degree
 
     const angle = index * angleStep;
     // convert meter radius → degree offset
-    const deltaLat =
-        (radius * Math.sin(angle)) / earthMetersPerDegreeLat;
+    const deltaLat = (radius * Math.sin(angle)) / earthMetersPerDegreeLat;
     const deltaLon =
         (radius * Math.cos(angle)) /
-        (earthMetersPerDegreeLat *
-            Math.cos((originLat * Math.PI) / 180));
-    return { deltaLat: deltaLat, deltaLon: deltaLon }
+        (earthMetersPerDegreeLat * Math.cos((originLat * Math.PI) / 180));
+    return { deltaLat: deltaLat, deltaLon: deltaLon };
 };
 
 export default function SpiderfyCluster(props: Props) {
     const [expanded, setExpanded] = useState(true);
 
     const animatedPoints = props.items.map((item, index) => {
-        const { deltaLat, deltaLon } = determineDeltas(props.items.length, index, props.origin.latitude, props.radius)
+        const { deltaLat, deltaLon } = determineDeltas(
+            props.items.length,
+            index,
+            props.origin.latitude,
+            props.radius
+        );
 
         return {
             id: item.id,
             item,
-            lat: useSharedValue(props.origin.latitude),
-            lon: useSharedValue(props.origin.longitude),
+            baseAngle: index * ((2 * Math.PI) / props.items.length),
             targetLat: props.origin.latitude + deltaLat,
             targetLon: props.origin.longitude + deltaLon,
+            progress: useSharedValue(0), // 0 → 1 controls spiral
         };
     });
 
-    // Animate expand/collapse
+    // Spiral animation
     useEffect(() => {
         animatedPoints.forEach((p, index) => {
-            p.lat.value = withTiming(
-                expanded ? p.targetLat : props.origin.latitude,
-                { duration: props.duration }
-            );
-            p.lon.value = withTiming(
-                expanded ? p.targetLon : props.origin.longitude,
-                { duration: props.duration }
-            );
+            p.progress.value = withTiming(expanded ? 1 : 0, {
+                duration: props.duration,
+            });
         });
-        !expanded &&
-            setTimeout(
-                props.onCollapseEnd ? props.onCollapseEnd : () => {},
-                props.duration
-            );
+
+        if (!expanded) {
+            setTimeout(props.onCollapseEnd ?? (() => {}), props.duration);
+        }
     }, [expanded]);
 
     return (
         <>
             <ClusterMarker
                 onPress={() => {
-                    console.log("closing");
                     props.onPress(undefined);
                     setExpanded(false);
                 }}
@@ -86,12 +87,33 @@ export default function SpiderfyCluster(props: Props) {
             />
 
             {animatedPoints.map((p) => {
-                const animatedProps = useAnimatedProps(() => ({
-                    coordinate: {
-                        latitude: p.lat.value,
-                        longitude: p.lon.value,
-                    },
-                }));
+                const maxRotation = (120 * Math.PI) / 180; // 120° in radians
+
+                const animatedProps = useAnimatedProps(() => {
+                    const t = p.progress.value; // 0 → 1
+
+                    // spiral reduces as t → 1
+                    const spiralAngle = maxRotation * (1 - t);
+
+                    // linear interpolation to target delta
+                    const latDelta = p.targetLat - props.origin.latitude;
+                    const lonDelta = p.targetLon - props.origin.longitude;
+
+                    // apply spiral rotation
+                    const rotatedLat =
+                        latDelta * Math.cos(spiralAngle) -
+                        lonDelta * Math.sin(spiralAngle);
+                    const rotatedLon =
+                        latDelta * Math.sin(spiralAngle) +
+                        lonDelta * Math.cos(spiralAngle);
+
+                    return {
+                        coordinate: {
+                            latitude: props.origin.latitude + rotatedLat * t,
+                            longitude: props.origin.longitude + rotatedLon * t,
+                        },
+                    };
+                });
 
                 return (
                     <CenterMarker

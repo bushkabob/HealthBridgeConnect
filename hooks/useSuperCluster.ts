@@ -112,6 +112,7 @@ export default function useSupercluster(
                 } as ClusterResult;
             });
 
+            spiderfiedClusterId !== undefined && unspiderfy()
             setClusteredDisplayCenters(formatted);
         },
         [supercluster]
