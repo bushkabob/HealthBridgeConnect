@@ -35,11 +35,12 @@ export default function useSupercluster(
 
     const [prevZoom, setPrevZoom] = useState<number>(0);
 
+    // NEW: currentZoom state
+    const [currentZoom, setCurrentZoom] = useState<number>(0);
+
     const clusterTimeout = useRef<number | null>(null);
 
-    // ---------------------------------------------------------
     // INIT SUPERCLUSTER
-    // ---------------------------------------------------------
     useEffect(() => {
         if (!displayCenters || displayCenters.length === 0) {
             setSupercluster(undefined);
@@ -69,18 +70,83 @@ export default function useSupercluster(
 
         const sc = new Supercluster({ radius: 60, maxZoom: MAX_ZOOM });
         sc.load(points);
-
         setSupercluster(sc);
     }, [displayCenters]);
+
+    // SPIDERFY STATE
+    const [spiderfiedClusters, setSpiderfiedClusters] = useState<
+        Record<number, Center[]>
+    >({});
+    const [expandedClusterId, setExpandedClusterId] = useState<number | null>(
+        null
+    );
+
+    // spiderfy ALL clusters visible at MAX_ZOOM
+    const spiderfyAll = useCallback(
+        (formatted: ClusterResult[]) => {
+            if (!supercluster) return [];
+            const out: Record<number, Center[]> = {};
+            formatted.forEach((item) => {
+                if (item.type !== "cluster") return [];
+                const leaves = supercluster
+                    .getLeaves(item.id, Infinity)
+                    .map((val) => ({
+                        type: "center",
+                        id: val.properties.id,
+                        center: val.properties.raw,
+                        coordinate: {
+                            latitude: val.geometry.coordinates[1],
+                            longitude: val.geometry.coordinates[0],
+                        },
+                    }));
+                if (leaves.length > 1) {
+                    out[item.id] = leaves as Center[];
+                }
+            });
+            setSpiderfiedClusters(out);
+            // if expanded one is no longer valid, reset
+            if (expandedClusterId && !out[expandedClusterId]) {
+                setExpandedClusterId(null);
+            }
+            return out;
+        },
+        [supercluster, expandedClusterId]
+    );
+
+    const expandCluster = useCallback(
+        (clusterId: number) => {
+            console.log(clusterId);
+            if (expandedClusterId === clusterId) return;
+            setExpandedClusterId(null);
+            requestAnimationFrame(() => {
+                setExpandedClusterId(clusterId);
+            });
+        },
+        [expandedClusterId]
+    );
+
+    const closeCluster = useCallback(() => {
+        if (expandedClusterId == null) return;
+        requestAnimationFrame(() => {
+            setExpandedClusterId(null);
+        });
+    }, [expandedClusterId]);
+
+    const clearSpiderfy = useCallback(() => {
+        setExpandedClusterId(null);
+        setSpiderfiedClusters({})
+    }, []);
 
     // BASIC CLUSTER COMPUTATION
     const computeVisibleClusters = useCallback(
         async (targetZoom?: number) => {
-            if (!supercluster || !mapRef.current) return;
+            if (!supercluster || !mapRef.current) return {};
 
             const bounds = await mapRef.current.getMapBoundaries();
             const zoom = targetZoom ?? boundariesToZoom(bounds);
-            setPrevZoom(zoom);
+
+            setPrevZoom(currentZoom);
+            setCurrentZoom(zoom);
 
             const worldBounds: [number, number, number, number] = [
                 -180, -85, 180, 85,
@@ -112,19 +178,33 @@ export default function useSupercluster(
                 } as ClusterResult;
             });
 
-            spiderfiedClusterId !== undefined && unspiderfy()
-            setClusteredDisplayCenters(formatted);
+            var spiderfiedClusters: Record<number, Center[]> = {};
+
+            console.log("Current zoom: ", zoom)
+
+            // AUTO-SPIDERFY LOGIC
+            if (zoom >= MAX_ZOOM) {
+                spiderfiedClusters = spiderfyAll(formatted);
+
+                // expand first cluster if none expanded
+                if (expandedClusterId == null) {
+                    const firstCluster = formatted.find(
+                        (c) => c.type === "cluster"
+                    );
+                    if (firstCluster) setExpandedClusterId(firstCluster.id);
+                }
+            }
+            setClusteredDisplayCenters(formatted)
+            return spiderfiedClusters;
         },
-        [supercluster]
+        [supercluster, expandedClusterId]
     );
 
     useEffect(() => {
         computeVisibleClusters();
     }, [supercluster]);
 
-    // ---------------------------------------------------------
     // ZOOM-DEBOUNCED RECALC
-    // ---------------------------------------------------------
     const safeComputeClusters = useCallback(async () => {
         if (!mapRef.current) return;
 
@@ -141,52 +221,19 @@ export default function useSupercluster(
         }
     }, [prevZoom, computeVisibleClusters]);
 
-    // SPIDERFY HELPERS
-    const [spiderfiedClusterId, setSpiderfiedClusterId] = useState<
-        SpiderCenter | null
-    >(null);
-    const [spiderfiedLeaves, setSpiderfiedLeaves] = useState<Center[]>([]);
-
-    const spiderfy = useCallback(
-        (clusterId: number, lat: number, lon: number) => {
-            if (!supercluster) return;
-
-            const leaves: Center[] = supercluster.getLeaves(clusterId, Infinity).map((val) => {
-                return {
-                    type: "center",
-                    id: val.properties.id,
-                    center: val.properties.raw,
-                    coordinate: { latitude: val.geometry.coordinates[1], longitude: val.geometry.coordinates[0] }
-                }
-            });
-            if (!leaves || leaves.length <= 1) return;
-            setSpiderfiedClusterId({id: clusterId, lat: lat, lon: lon});
-            setSpiderfiedLeaves(leaves);
-        },
-        [supercluster]
-    );
-
-    const unspiderfy = () => {
-        setSpiderfiedClusterId(null);
-        setSpiderfiedLeaves([]);
-    };
-
-    // ---------------------------------------------------------
     return {
         supercluster,
         clusteredDisplayCenters,
-        computeVisibleClusters,
-        safeComputeClusters,
         prevZoom,
-        spiderfy,
-        unspiderfy,
-        spiderfiedClusterId,
-        spiderfiedLeaves,
-    };
-}
+        currentZoom,
 
-export type SpiderCenter = {
-    id: number,
-    lat: number,
-    lon: number
+        spiderfiedClusters,
+        expandedClusterId,
+
+        safeComputeClusters,
+        computeVisibleClusters,
+        expandCluster,
+        closeCluster,
+        clearSpiderfy
+    };
 }

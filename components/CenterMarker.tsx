@@ -1,7 +1,8 @@
 import { FQHCSite } from "@/types/types";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useEffect } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { LatLng, Marker } from "react-native-maps";
 import Animated, {
     useAnimatedStyle,
@@ -16,6 +17,7 @@ interface CenterMarkerProps {
     coordinate: LatLng;
     key: string;
     animateProps?: any
+    animatedStyle?: any
 }
 
 const AniamtedIcon = Animated.createAnimatedComponent(Ionicons)
@@ -29,7 +31,7 @@ const CenterMarker = (props: CenterMarkerProps) => {
         return {
             height: scale.value * 40,
             width: scale.value * 40,
-            borderWidth: scale.value * 2
+            // borderWidth: scale.value * 2
         };
     });
 
@@ -54,22 +56,22 @@ const CenterMarker = (props: CenterMarkerProps) => {
             id={props.center["BPHC Assigned Number"]}
             coordinate={props.coordinate}
             animatedProps={props.animateProps}
+            style={[props.animatedStyle, {width: 60, height: 60}]}
         >
                 <View
-                    style={[{ alignItems: "center", justifyContent: "center", width: 60, height: 60 }]}
+                    style={[{ justifyContent: "center", alignItems: "center", width: 60, height: 60 }]}
                 >
                     <Animated.View
                         style={[{
                             width: 40,
                             height: 40,
                             borderRadius: 60,
-                            backgroundColor: "red",
-                            borderColor: "white",
                             alignItems: "center",
                             justifyContent: "center",
-                            
+                            overflow: "hidden"
                         }, animatedStyle]}
                     >
+                        <LinearGradient style={StyleSheet.absoluteFill} colors={["#ff7878ff","#ff4545ff"]}/>
                         <AniamtedIcon name="medical" style={animatedProps} size={22} color="white" />
                     </Animated.View>
                 </View>

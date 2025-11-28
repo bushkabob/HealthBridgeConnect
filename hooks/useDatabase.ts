@@ -5,59 +5,68 @@ import { useEffect, useState } from "react";
 
 const DB_NAME = "fqhc.db";
 
-//Singleton instance variable (lives across hook calls)
+// Singleton instance variable (lives across hook calls)
 let databaseInstance: SQLite.SQLiteDatabase | undefined = undefined;
 let databaseInitPromise: Promise<SQLite.SQLiteDatabase> | undefined = undefined;
 
 const downloadDb = async (dbFile: File) => {
     try {
-        // Load the DB asset
-        console.log("Loading DB")
+        console.log("Loading DB asset...");
         const asset = await Asset.loadAsync(
             require('../assets/database/fqhc.db')
-        )
-        console.log(asset[0].localUri, asset[0].uri)
+        );
+
         const assetFile = new File(asset[0].localUri as string);
+
+        // Copy DB asset to destination
         await assetFile.copy(dbFile);
+        console.log("DB copied successfully.");
     } catch (error) {
         console.log("Error copying DB file:", error);
+        throw error;
     }
-}
+};
 
 async function initializeDatabase(): Promise<SQLite.SQLiteDatabase> {
-    // If already initialized, just return it
     if (databaseInstance) return databaseInstance;
-
-    // If initialization is already in progress, wait for it
     if (databaseInitPromise) return databaseInitPromise;
 
     databaseInitPromise = (async () => {
         try {
-
-            // Destination: app's document directory
             const dbFile = new File(Paths.document, DB_NAME);
 
-            // Copy DB if it doesn’t exist
+            // Load asset to get its expected size
+            const asset = await Asset.loadAsync(
+                require('../assets/database/fqhc.db')
+            );
+            const assetFile = new File(asset[0].localUri as string);
+            const expectedSize = assetFile.size;
+
+            let shouldDownload = false;
+
             if (!dbFile.exists || dbFile.size === 0) {
-                console.log("Re-downloading DB")
-                console.log("DB Exists: ", dbFile.exists)
-                if(dbFile.exists) {
-                    console.log("Deleting Failed attempt")
-                    dbFile.delete()
-                }
-                await downloadDb(dbFile)
+                console.log("DB file missing or empty. Will download.");
+                shouldDownload = true;
+            } else if (dbFile.size !== expectedSize) {
+                console.log(
+                    `DB file size mismatch: ${dbFile.size} vs expected ${expectedSize}. Redownloading.`
+                );
+                dbFile.delete();
+                shouldDownload = true;
             } else {
-                console.log("DB file already exists at", dbFile.uri);
+                console.log("DB file exists and size matches:", dbFile.size);
             }
 
-            // Open the SQLite database
+            if (shouldDownload) {
+                await downloadDb(dbFile);
+            }
+
             const db = await SQLite.openDatabaseAsync(
                 DB_NAME,
                 undefined,
                 Paths.document.uri
             );
             databaseInstance = db;
-    
 
             console.log("✅ Database initialized and ready", dbFile.size);
             return db;

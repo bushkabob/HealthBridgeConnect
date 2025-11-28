@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { GlassView } from "expo-glass-effect";
+import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
@@ -67,15 +68,13 @@ function SiteCard({
                         style={{
                             aspectRatio: 1,
                             width: 40,
-                            backgroundColor: "gray",
-                            borderStyle: "solid",
-                            borderColor: "darkgray",
-                            borderWidth: 2,
                             borderRadius: 100,
                             alignItems: "center",
                             justifyContent: "center",
+                            overflow: "hidden"
                         }}
                     >
+                        <LinearGradient style={StyleSheet.absoluteFill} colors={["#9d9d9dff","#535353ff"]}/>
                         <Ionicons name="business" size={24} color={"white"} />
                     </View>
                 ) : (
@@ -83,15 +82,13 @@ function SiteCard({
                         style={{
                             aspectRatio: 1,
                             width: 40,
-                            backgroundColor: "red",
-                            borderStyle: "solid",
-                            borderColor: "darkred",
-                            borderWidth: 2,
                             borderRadius: 100,
                             alignItems: "center",
                             justifyContent: "center",
+                            overflow: "hidden"
                         }}
                     >
+                        <LinearGradient style={StyleSheet.absoluteFill} colors={["#ff7878ff","#ff4545ff"]}/>
                         <Ionicons name="medical" size={24} color={"white"} />
                     </View>
                 )}

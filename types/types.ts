@@ -54,6 +54,7 @@ export interface FQHCSite {
     "U.S. - Mexico Border 100 Kilometer Indicator": string;
     "U.S. - Mexico Border County Indicator": string;
     "U.S. Congressional Representative Name": string;
+    "Medicare": number;
     distance: number;
 }
 

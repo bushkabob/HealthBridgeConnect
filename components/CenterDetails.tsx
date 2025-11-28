@@ -18,10 +18,6 @@ import Animated, {
     useAnimatedProps,
     useAnimatedReaction,
 } from "react-native-reanimated";
-import {
-    useSafeAreaFrame,
-    useSafeAreaInsets,
-} from "react-native-safe-area-context";
 import { FQHCSite } from "../types/types";
 import { DraggableHandle } from "./FixedDraggable";
 import { useFixedDraggable } from "./FixedDraggableContext";
@@ -40,16 +36,11 @@ const CenterDetails = (props: CenterDetailProps) => {
     } = useFixedDraggable();
 
     const headerHeight = MIN_HEIGHT
-    const frame = useSafeAreaFrame();
-    const insets = useSafeAreaInsets();
     // const headerHeight = getDefaultHeaderHeight(frame, false, insets.top);
     const [scrollEnabled, setScrollEnabled] = useState<boolean>(false);
 
     const textColor = useThemeColor({}, "text");
     const searchBackground = useThemeColor({}, "background");
-    const backgroundColor = useThemeColor({}, "background");
-    const cardColor = useThemeColor({}, "card");
-    const cardColor2 = useThemeColor({}, "card1");
 
     const address =
         props.center === null
@@ -323,10 +314,6 @@ const styles = StyleSheet.create({
         width: "100%",
         borderRadius: 16,
         padding: 20,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
         elevation: 5,
     },
     title: {

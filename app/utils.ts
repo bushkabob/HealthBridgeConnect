@@ -48,8 +48,6 @@ export const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 const { width, height } = Dimensions.get("screen");
 
 export function getMinZoomForPoint(
-    lat: number,
-    lon: number,
     id: string,
     supercluster: Supercluster,
     maxZoom = 20
@@ -130,6 +128,16 @@ export function zoomToBoundaries(
         east: center.longitude + adjustedLonDelta / 2,
         north: Math.min(85, center.latitude + adjustedLatDelta / 2),
     };
+}
+
+export function deltasToZoom(latitudeDelta: number, longitudeDelta: number) {
+    // Fallback if delta missing
+    if (!longitudeDelta || longitudeDelta <= 0) return 20;
+
+    const zoom = Math.log2(360 / longitudeDelta);
+
+    // Clamp to Google/Supercluster zoom range
+    return Math.min(Math.max(zoom, 0), 20);
 }
 
 export function zoomFromAltitude(altitudeMeters: number, mapHeightPx: number) {
