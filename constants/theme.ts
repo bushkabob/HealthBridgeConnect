@@ -15,7 +15,7 @@ export const Colors = {
   light: {
     // 🩶 Base text and icons
     text: "#1a1a1a",
-    textSecondary: "#444c56",
+    textSecondary: "#7e7e7eff",
     icon: "#5b6470",
     placeholder: "#9ba3af",
 

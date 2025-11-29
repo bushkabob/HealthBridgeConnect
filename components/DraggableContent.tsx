@@ -1,9 +1,10 @@
 import { AnimatedBlurView, haversineDistance, levenshtein } from "@/app/utils";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { City, FQHCSite, MapCenter } from "@/types/types";
-import React, { useEffect, useRef, useState } from "react";
+import React, { RefObject, useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
+import MapView from "react-native-maps";
 import Animated, {
     Extrapolation,
     interpolate,
@@ -27,6 +28,7 @@ interface DraggableContentProps {
     setCurrentCenter: Function;
     unit: string;
     searching: boolean;
+    mapRef: RefObject<MapView | null>
     //@ts-ignore
     // markerRefs: RefObject<Record<string, Marker | null>>;
 }
@@ -261,6 +263,7 @@ const DraggableContent = (props: DraggableContentProps) => {
                 cities={displayCities}
                 setCenter={props.setCurrentCenter}
                 headerHeight={searchActive ? headerHeight + 50 : headerHeight}
+                mapRef={props.mapRef}
                 minimizeScroll={() => {
                     setViewHeight(0.0, 300);
                 }}
@@ -279,7 +282,7 @@ interface SearchResultsProps {
     unit: string;
     displayCenters: FQHCSite[];
     cities: City[];
-    // markerRefs: any;
+    mapRef: RefObject<MapView | null>
     setCenter: Function;
     headerHeight: number;
     minimizeScroll?: Function;
@@ -390,15 +393,15 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
                 renderItem={(val) => {
                     const delta = val.item.isCity ? 0.1 : 0.1;
                     const moveToIcon = () => {
-                        // props.mapRef.current?.animateToRegion(
-                        //     {
-                        //         latitude: val.item.lat,
-                        //         longitude: val.item.lon,
-                        //         latitudeDelta: delta,
-                        //         longitudeDelta: delta,
-                        //     },
-                        //     1000
-                        // );
+                        val.item.isCity && props.mapRef.current?.animateToRegion(
+                            {
+                                latitude: val.item.lat,
+                                longitude: val.item.lon,
+                                latitudeDelta: delta,
+                                longitudeDelta: delta,
+                            },
+                            1000
+                        );
                         props.minimizeScroll && props.minimizeScroll();
                         flatListRef?.current?.scrollToOffset({
                             animated: true,

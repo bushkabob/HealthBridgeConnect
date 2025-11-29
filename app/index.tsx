@@ -53,6 +53,7 @@ export default function Map() {
 
     const [searchRadius, setSearchRadius] = useState<number>(10);
     const [unit, setUnit] = useState<string>("Imperial");
+    const [dialogShown, setDialogShown] = useState<boolean>(false)
     const [searchingCenters, setSearchingCenters] = useState<boolean>(false);
     const [useOffset, setUseOffset] = useState(false);
 
@@ -352,6 +353,10 @@ export default function Map() {
                 await AsyncStorage.setItem("radiusPref", "10");
                 setSearchRadius(Number("10"));
             }
+            const dialogShown = await AsyncStorage.getItem("dialogShown");
+            if(dialogShown === "true") {
+                setDialogShown(true)
+            }
         } catch (e) {
             console.log(e);
         }
@@ -391,6 +396,11 @@ export default function Map() {
 
     const draggableOverlapImperatives =
         useRef<ClippedDraggablesHandle>(undefined);
+
+    const markDialogShown = () => {
+        setDialogShown(true)
+        AsyncStorage.setItem("dialogShown", "true")
+    }
 
     return (
         <View
@@ -553,6 +563,7 @@ export default function Map() {
                             displayCenters={displayCenters}
                             unit={unit}
                             searching={loading || searchingCenters}
+                            mapRef={mapRef}
                         />
                     }
                     topContent={
@@ -567,7 +578,10 @@ export default function Map() {
                                           }
                                         : () => {}
                                 }
+                                dialogShown={dialogShown}
+                                setDialogShown={markDialogShown}
                                 center={lastValidDetailCenter}
+                                unit={unit === "Imperial" ? "mi" : "km"}
                             />
                         ) : (
                             <></>

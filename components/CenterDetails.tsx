@@ -2,8 +2,9 @@ import { AnimatedBlurView } from "@/app/utils";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { Ionicons } from "@expo/vector-icons";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+    Alert,
     Linking,
     Platform,
     Pressable,
@@ -25,22 +26,39 @@ import { useFixedDraggable } from "./FixedDraggableContext";
 interface CenterDetailProps {
     center: FQHCSite;
     close: Function;
+    unit: string;
+    dialogShown: boolean;
+    setDialogShown: Function;
 }
 
 const CenterDetails = (props: CenterDetailProps) => {
-    const {
-        progress,
-        scrollHandler,
-        scrollY,
-        MIN_HEIGHT
-    } = useFixedDraggable();
+    const { progress, scrollHandler, scrollY, MIN_HEIGHT } =
+        useFixedDraggable();
 
-    const headerHeight = MIN_HEIGHT
+    const headerHeight = MIN_HEIGHT;
     // const headerHeight = getDefaultHeaderHeight(frame, false, insets.top);
     const [scrollEnabled, setScrollEnabled] = useState<boolean>(false);
 
     const textColor = useThemeColor({}, "text");
     const searchBackground = useThemeColor({}, "background");
+    const cardBackground = useThemeColor({}, "card");
+    const titleColor = useThemeColor({}, "textSecondary");
+
+    useEffect(() => {
+        console.log(props.center, props.dialogShown);
+        if (props.center !== null && !props.dialogShown) {
+            Alert.alert(
+                "Insurance Disclaimer",
+                "The information provided regarding Federally Qualified Health Centers (FQHCs) is compiled from the resources identified in the Acknowledgements section of the “About” page. While we strive to maintain accurate and up-to-date information, no guarantee, warranty, or representation is made regarding the completeness, accuracy, reliability, or current status of any information presented.\n\nUsers are solely responsible for verifying all details directly with the FQHC, including whether the facility accepts their specific insurance plan and any other requirements for receiving care. This platform does not assume liability for any decisions or actions taken based on the information provided.",
+                [
+                    {
+                        text: "OK",
+                        onPress: () => props.setDialogShown(),
+                    },
+                ]
+            );
+        }
+    }, [props.center, props.dialogShown]);
 
     const address =
         props.center === null
@@ -138,13 +156,20 @@ const CenterDetails = (props: CenterDetailProps) => {
                         </Pressable>
                         <Text
                             numberOfLines={2}
-                            style={[styles.title, { color: textColor, paddingTop: 8, flexGrow: 1 }]}
+                            style={[
+                                styles.title,
+                                {
+                                    color: textColor,
+                                    paddingTop: 8,
+                                    flexGrow: 1,
+                                },
+                            ]}
                         >
                             {props.center["Site Name"]}
                         </Text>
                         <Pressable
                             onPress={() => {
-                                props.close()
+                                props.close();
                             }}
                         >
                             <GlassView
@@ -171,12 +196,14 @@ const CenterDetails = (props: CenterDetailProps) => {
                 </AnimatedBlurView>
             </View>
             <Animated.ScrollView
-                style={{ width: "100%", padding: 20, flex: 1}}
-                contentContainerStyle={{
-                    paddingBottom: 100,
-                    paddingTop: headerHeight,
-                    flex: 1
-                }}
+                style={{ width: "100%", padding: 10 }}
+                contentContainerStyle={[
+                    {
+                        paddingBottom: 100,
+                        paddingTop: headerHeight,
+                    },
+                    StyleSheet.absoluteFill,
+                ]}
                 scrollEnabled={scrollEnabled}
                 scrollIndicatorInsets={{ top: headerHeight }}
                 showsVerticalScrollIndicator={!(Platform.OS === "android")}
@@ -184,43 +211,7 @@ const CenterDetails = (props: CenterDetailProps) => {
             >
                 <View style={styles.content}>
                     <View style={[styles.card]}>
-                        <Text style={[styles.address, { color: textColor }]}>
-                            {address}
-                        </Text>
-
-                        <View style={[styles.infoSection]}>
-                            <Text
-                                style={[styles.infoText, { color: textColor }]}
-                            >
-                                <Text style={styles.label}>Weekly Hours: </Text>
-                                {props.center["Operating Hours per Week"]}{" "}
-                                {props.center[
-                                    "Health Center Operating Schedule Identification Number"
-                                ] !== "0"
-                                    ? `(${props.center["Health Center Operational Schedule Description"]})`
-                                    : ""}
-                            </Text>
-                            <Text
-                                style={[styles.infoText, { color: textColor }]}
-                            >
-                                <Text style={styles.label}>Year-Round: </Text>
-                                {operatesYearRound}
-                            </Text>
-                            <Text
-                                style={[styles.infoText, { color: textColor }]}
-                            >
-                                <Text style={styles.label}>
-                                    Location Type:{" "}
-                                </Text>
-                                {
-                                    props.center[
-                                        "Health Center Location Type Description"
-                                    ]
-                                }
-                            </Text>
-                        </View>
-
-                        <View style={styles.buttonRow}>
+                        <View style={styles.row}>
                             <ActionButton
                                 icon="location"
                                 label="Map"
@@ -253,8 +244,193 @@ const CenterDetails = (props: CenterDetailProps) => {
                                     )
                                 }
                                 disabled={
-                                    props.center["Site Web Address"] === ""
+                                    props.center["Site Web Address"] === "" ||
+                                    props.center["Site Web Address"] === "NA"
                                 }
+                            />
+                        </View>
+                        <View style={[styles.row]}>
+                            <InfoView
+                                icon="time-outline"
+                                color={textColor}
+                                label="Hours"
+                                text={
+                                    props.center["Operating Hours per Week"] !==
+                                    ""
+                                        ? props.center[
+                                              "Operating Hours per Week"
+                                          ] + " / Week"
+                                        : "Unknown"
+                                }
+                                titleColor={titleColor}
+                                backgroundColor={cardBackground}
+                            />
+                            <InfoView
+                                icon="map-outline"
+                                color={textColor}
+                                label="Distance"
+                                text={
+                                    props.center.distance
+                                        .toFixed(0)
+                                        .toString() +
+                                    " " +
+                                    props.unit
+                                }
+                                titleColor={titleColor}
+                                backgroundColor={cardBackground}
+                            />
+                        </View>
+                        <View style={[styles.infoSection]}>
+                            <View
+                                style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    gap: 10,
+                                }}
+                            >
+                                <Text style={[styles.sectionTitle, {color: textColor}]}>Details</Text>
+                                <Pressable
+                                    onPress={() => {
+                                        Alert.alert(
+                                            "Information Disclaimer",
+                                            "The information provided regarding Federally Qualified Health Centers (FQHCs) is compiled from the resources identified in the Acknowledgements section of the “About” page. While we strive to maintain accurate and up-to-date information, no guarantee, warranty, or representation is made regarding the completeness, accuracy, reliability, or current status of any information presented.\n\nUsers are solely responsible for verifying all details directly with the FQHC. This platform does not assume liability for any decisions or actions taken based on the information provided.",
+                                            [
+                                                {
+                                                    text: "OK",
+                                                },
+                                            ]
+                                        );
+                                    }}
+                                >
+                                    <Ionicons
+                                        name="information-circle"
+                                        size={28}
+                                        color={textColor}
+                                    />
+                                </Pressable>
+                            </View>
+                            <DetailRow
+                                title="Center Name"
+                                titleColor={titleColor}
+                                text={props.center["Site Name"]}
+                                textColor={textColor}
+                            />
+                            {props.center["Site Telephone Number"] !== "" && (
+                                <DetailRow
+                                    title="Telephone"
+                                    titleColor={titleColor}
+                                    text={props.center["Site Telephone Number"]}
+                                    textColor={textColor}
+                                />
+                            )}
+                            {props.center["Site Web Address"] !== "" &&
+                                props.center["Site Web Address"] !== "NA" && (
+                                    <DetailRow
+                                        title="Website"
+                                        titleColor={titleColor}
+                                        text={props.center["Site Web Address"]}
+                                        textColor={textColor}
+                                    />
+                                )}
+                            <DetailRow
+                                title="Structure Type"
+                                titleColor={titleColor}
+                                text={
+                                    props.center[
+                                        "Health Center Location Type Description"
+                                    ]
+                                }
+                                textColor={textColor}
+                            />
+                            <DetailRow
+                                title="Location Type"
+                                titleColor={titleColor}
+                                text={
+                                    props.center[
+                                        "Health Center Location Type Description"
+                                    ] === "Mobile Van"
+                                        ? props.center[
+                                              "Health Center Location Type Description"
+                                          ]
+                                        : props.center[
+                                              "Health Center Service Delivery Site Location Setting Description"
+                                          ] === "All Other Clinic Types"
+                                        ? "Not Specified"
+                                        : props.center[
+                                              "Health Center Service Delivery Site Location Setting Description"
+                                          ]
+                                }
+                                textColor={textColor}
+                            />
+                            <DetailRow
+                                title="Address"
+                                titleColor={titleColor}
+                                text={address}
+                                textColor={textColor}
+                            />
+                        </View>
+                        <View style={[styles.infoSection]}>
+                            <View
+                                style={{
+                                    flexDirection: "row",
+                                    alignItems: "center",
+                                    gap: 10,
+                                }}
+                            >
+                                <Text style={[styles.sectionTitle, {color: textColor}]}>
+                                    Insurance
+                                </Text>
+                                <Pressable
+                                    onPress={() => {
+                                        Alert.alert(
+                                            "Insurance Disclaimer",
+                                            "The information provided regarding Federally Qualified Health Centers (FQHCs) is compiled from the resources identified in the Acknowledgements section of the “About” page. While we strive to maintain accurate and up-to-date information, no guarantee, warranty, or representation is made regarding the completeness, accuracy, reliability, or current status of any information presented.\n\nUsers are solely responsible for verifying all details directly with the FQHC, including whether the facility accepts their specific insurance plan and any other requirements for receiving care. This platform does not assume liability for any decisions or actions taken based on the information provided.",
+                                            [
+                                                {
+                                                    text: "OK",
+                                                },
+                                            ]
+                                        );
+                                    }}
+                                >
+                                    <Ionicons
+                                        name="information-circle"
+                                        size={28}
+                                        color={textColor}
+                                    />
+                                </Pressable>
+                            </View>
+                            <DetailRow
+                                title="Medicare"
+                                titleColor={titleColor}
+                                text={""}
+                                hasIcon
+                                icon={
+                                    props.center.Medicare === 1
+                                        ? "checkmark-circle"
+                                        : "help-circle"
+                                }
+                                textColor={
+                                    props.center.Medicare === 1
+                                        ? "#15ff00ff"
+                                        : textColor
+                                }
+                            />
+                            <DetailRow
+                                title="Medicaid"
+                                titleColor={titleColor}
+                                text={""}
+                                textColor={"#15ff00ff"}
+                                hasIcon
+                                icon={"checkmark-circle"}
+                            />
+                            <DetailRow
+                                title="Private / Other"
+                                titleColor={titleColor}
+                                text={""}
+                                textColor={textColor}
+                                hasIcon
+                                icon={"help-circle"}
                             />
                         </View>
                     </View>
@@ -278,6 +454,7 @@ const ActionButton = ({
     <Pressable
         style={({ pressed }) => [
             styles.button,
+            styles.buttonShadow,
             {
                 backgroundColor: disabled
                     ? "rgb(198,198,198)"
@@ -291,9 +468,69 @@ const ActionButton = ({
         disabled={disabled}
     >
         <Ionicons name={icon} size={18} color="white" />
-        <Text style={styles.buttonText}>{label}</Text>
+        <Text style={[styles.buttonText, { color: "white" }]}>{label}</Text>
     </Pressable>
 );
+
+interface InfoViewProps {
+    icon: any;
+    label: string;
+    color: string;
+    text: string;
+    titleColor: string;
+    backgroundColor: string;
+}
+
+const InfoView = (props: InfoViewProps) => {
+    return (
+        <View style={[styles.button, {}]}>
+            <Text style={[styles.infoTextTitle, { color: props.titleColor }]}>
+                {props.label}
+            </Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+                <Ionicons name={props.icon} size={20} color={props.color} />
+                <Text style={{color: props.color}} >{props.text}</Text>
+            </View>
+        </View>
+    );
+};
+
+interface DetailRowProps {
+    title: string;
+    text: string;
+    titleColor: string;
+    textColor: string;
+    hasIcon?: boolean;
+    icon?: any;
+}
+
+const DetailRow = (props: DetailRowProps) => {
+    return (
+        <View style={styles.detailTextRow}>
+            <Text style={[styles.detailTextTitle, { color: props.titleColor }]}>
+                {props.title}
+            </Text>
+            <View
+                style={{
+                    width: "50%",
+                    flexDirection: "row",
+                    justifyContent: "flex-end",
+                }}
+            >
+                <Text style={{ textAlign: "right", color: props.textColor }}>
+                    {props.text}
+                </Text>
+                {props.hasIcon && (
+                    <Ionicons
+                        size={28}
+                        color={props.textColor}
+                        name={props.icon}
+                    />
+                )}
+            </View>
+        </View>
+    );
+};
 
 const styles = StyleSheet.create({
     container: {
@@ -313,7 +550,6 @@ const styles = StyleSheet.create({
     card: {
         width: "100%",
         borderRadius: 16,
-        padding: 20,
         elevation: 5,
     },
     title: {
@@ -323,34 +559,46 @@ const styles = StyleSheet.create({
         marginBottom: 6,
         flexShrink: 1,
     },
-    address: {
-        fontSize: 14,
-        textAlign: "center",
-        marginBottom: 16,
+    sectionTitle: {
+        fontSize: 20,
+        fontWeight: "600",
     },
     infoSection: {
         borderRadius: 12,
         padding: 12,
-        marginBottom: 16,
+        margin: 10,
     },
-    infoText: {
+    detailTextRow: {
+        marginVertical: 10,
+        flexDirection: "row",
+        overflow: "hidden",
+    },
+    detailTextTitle: {
+        width: "50%",
+        fontSize: 18,
+        fontWeight: "600",
+    },
+    infoTextTitle: {
         fontSize: 14,
-        marginVertical: 4,
+        fontWeight: "600",
+        marginVertical: 5,
     },
     label: {
         fontWeight: "600",
     },
-    buttonRow: {
+    row: {
         flexDirection: "row",
         justifyContent: "space-evenly",
-        marginTop: 4,
+        marginVertical: 4,
     },
     button: {
         borderRadius: 10,
         justifyContent: "center",
         alignItems: "center",
-        paddingHorizontal: 24,
+        paddingHorizontal: 30,
         paddingVertical: 10,
+    },
+    buttonShadow: {
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowRadius: 3,
@@ -358,7 +606,6 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     buttonText: {
-        color: "white",
         fontSize: 12,
         marginTop: 2,
         fontWeight: "500",

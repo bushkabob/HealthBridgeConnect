@@ -62,7 +62,7 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (
         progress = useSharedValue(SNAP_BOTTOM);
     }
 
-    const background2 = useThemeColor({}, "background3");
+    const background2 = useThemeColor({}, "card2");
 
     const scaleRange = props.scaleRange ?? [SCALE_MIN, SCALE_MAX];
     const scale = useDerivedValue(() => {
