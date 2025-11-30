@@ -89,7 +89,7 @@ const CenterDetails = (props: CenterDetailProps) => {
     }
 
     const scrollToTop = () => {
-        flatListRef.current!.scrollTo({ animated: true, y: 0 });
+        flatListRef.current!.scrollTo({ animated: true, y: -headerHeight });
     };
 
     useAnimatedReaction(

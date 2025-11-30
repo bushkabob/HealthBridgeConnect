@@ -56,7 +56,7 @@ const CenterMarker = (props: CenterMarkerProps) => {
             id={props.center["BPHC Assigned Number"]}
             coordinate={props.coordinate}
             animatedProps={props.animateProps}
-            style={[props.animatedStyle, {width: 60, height: 60}]}
+            style={[props.animatedStyle, {width: 60, height: 60, justifyContent: "center", alignItems: "center"}]}
         >
                 <View
                     style={[{ justifyContent: "center", alignItems: "center", width: 60, height: 60 }]}
