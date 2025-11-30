@@ -2,7 +2,7 @@ import { AnimatedBlurView } from "@/app/utils";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { Ionicons } from "@expo/vector-icons";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
     Alert,
     Linking,
@@ -32,12 +32,13 @@ interface CenterDetailProps {
 }
 
 const CenterDetails = (props: CenterDetailProps) => {
-    const { progress, scrollHandler, scrollY, MIN_HEIGHT } =
+    const { progress, scrollHandler, scrollY, MIN_HEIGHT, snapping } =
         useFixedDraggable();
 
     const headerHeight = MIN_HEIGHT;
     // const headerHeight = getDefaultHeaderHeight(frame, false, insets.top);
-    const [scrollEnabled, setScrollEnabled] = useState<boolean>(false);
+
+    const flatListRef = useRef<Animated.ScrollView>(null);
 
     const textColor = useThemeColor({}, "text");
     const searchBackground = useThemeColor({}, "background");
@@ -45,7 +46,6 @@ const CenterDetails = (props: CenterDetailProps) => {
     const titleColor = useThemeColor({}, "textSecondary");
 
     useEffect(() => {
-        console.log(props.center, props.dialogShown);
         if (props.center !== null && !props.dialogShown) {
             Alert.alert(
                 "Insurance Disclaimer",
@@ -88,13 +88,34 @@ const CenterDetails = (props: CenterDetailProps) => {
         operatesYearRound = "No";
     }
 
-    //disbale scrolling if draggable is not fully open
+    const scrollToTop = () => {
+        flatListRef.current!.scrollTo({ animated: true, y: 0 });
+    };
+
     useAnimatedReaction(
-        () => progress.value,
-        (p) => {
-            runOnJS(setScrollEnabled)(p === 1);
+        () => [progress, snapping],
+        (curr, prev) => {
+            if (!prev) {
+                return;
+            }
+            if (
+                curr[1].value === false &&
+                (curr[0].value as number) < 1 &&
+                flatListRef
+            ) {
+                runOnJS(scrollToTop)();
+            }
         }
     );
+
+    //disbale scrolling if draggable is not fully open
+    const additionalScrollProps = useAnimatedProps(() => {
+        return {
+            showsVerticalScrollIndicator:
+                !(Platform.OS === "android") && progress.value > 0,
+            scrollEnabled: progress.value === 1,
+        };
+    });
 
     const animatedIntensity = useAnimatedProps(() => {
         const intensity = interpolate(
@@ -203,10 +224,10 @@ const CenterDetails = (props: CenterDetailProps) => {
                         paddingTop: headerHeight,
                     },
                 ]}
-                scrollEnabled={scrollEnabled}
                 scrollIndicatorInsets={{ top: headerHeight }}
-                showsVerticalScrollIndicator={!(Platform.OS === "android")}
                 onScroll={scrollHandler}
+                ref={flatListRef}
+                animatedProps={additionalScrollProps}
             >
                 <View style={styles.content}>
                     <View style={[styles.card]}>
@@ -287,7 +308,14 @@ const CenterDetails = (props: CenterDetailProps) => {
                                     gap: 10,
                                 }}
                             >
-                                <Text style={[styles.sectionTitle, {color: textColor}]}>Details</Text>
+                                <Text
+                                    style={[
+                                        styles.sectionTitle,
+                                        { color: textColor },
+                                    ]}
+                                >
+                                    Details
+                                </Text>
                                 <Pressable
                                     onPress={() => {
                                         Alert.alert(
@@ -376,7 +404,12 @@ const CenterDetails = (props: CenterDetailProps) => {
                                     gap: 10,
                                 }}
                             >
-                                <Text style={[styles.sectionTitle, {color: textColor}]}>
+                                <Text
+                                    style={[
+                                        styles.sectionTitle,
+                                        { color: textColor },
+                                    ]}
+                                >
                                     Insurance
                                 </Text>
                                 <Pressable
@@ -488,7 +521,7 @@ const InfoView = (props: InfoViewProps) => {
             </Text>
             <View style={{ flexDirection: "row", gap: 8 }}>
                 <Ionicons name={props.icon} size={20} color={props.color} />
-                <Text style={{color: props.color}} >{props.text}</Text>
+                <Text style={{ color: props.color }}>{props.text}</Text>
             </View>
         </View>
     );

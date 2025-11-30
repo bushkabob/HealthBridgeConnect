@@ -1,9 +1,9 @@
 // DraggableSearchBar.tsx
 import { useThemeColor } from "@/hooks/use-theme-color";
 import Constants from "expo-constants";
-import { GlassView } from "expo-glass-effect";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import React, { ReactElement } from "react";
-import { Dimensions, Keyboard, Platform, StyleSheet, View } from "react-native";
+import { Dimensions, Keyboard, StyleSheet, View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
     DerivedValue,
@@ -277,9 +277,9 @@ const FixedDraggable: React.FC<FixedDraggableProps> = (
                         glassViewFade,
                         {
                             backgroundColor:
-                                Platform.OS === "android"
-                                    ? background2
-                                    : undefined,
+                                isLiquidGlassAvailable()
+                                    ? undefined
+                                    : background2,
                         },
                     ]}
                 />

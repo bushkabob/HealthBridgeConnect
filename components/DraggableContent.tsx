@@ -2,7 +2,7 @@ import { AnimatedBlurView, haversineDistance, levenshtein } from "@/app/utils";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { City, FQHCSite, MapCenter } from "@/types/types";
 import React, { RefObject, useEffect, useRef, useState } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Platform, Text, View } from "react-native";
 import { GestureDetector } from "react-native-gesture-handler";
 import MapView from "react-native-maps";
 import Animated, {
@@ -272,8 +272,6 @@ const DraggableContent = (props: DraggableContentProps) => {
     );
 };
 
-const styles = StyleSheet.create({});
-
 export default DraggableContent;
 
 interface SearchResultsProps {
@@ -290,7 +288,6 @@ interface SearchResultsProps {
 
 const SearchResults = React.memo((props: SearchResultsProps) => {
     const { progress, snapping, scrollHandler, gesture } = useFixedDraggable();
-    const [scrollEnabled, setScrollEnabled] = useState(false);
 
     const locales: {
         name: string;
@@ -347,12 +344,12 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
         }
     );
 
-    useAnimatedReaction(
-        () => progress.value,
-        (p) => {
-            runOnJS(setScrollEnabled)(p === 1);
+    const additionalScrollProps = useAnimatedProps(() => {
+        return {
+            showsVerticalScrollIndicator: !(Platform.OS === "android") && progress.value > 0,
+            scrollEnabled: progress.value === 1
         }
-    );
+    })
 
     return (
         <GestureDetector gesture={gesture}>
@@ -362,7 +359,6 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
                     paddingBottom: 100,
                     paddingTop: props.headerHeight,
                 }}
-                scrollEnabled={scrollEnabled}
                 scrollIndicatorInsets={{ top: props.headerHeight }}
                 showsVerticalScrollIndicator={!(Platform.OS === "android")}
                 data={locales}
@@ -370,6 +366,7 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
                 initialNumToRender={15}
                 maxToRenderPerBatch={15}
                 onScroll={scrollHandler}
+                animatedProps={additionalScrollProps}
                 ListEmptyComponent={
                     <View
                         style={{

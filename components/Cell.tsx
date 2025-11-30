@@ -30,7 +30,6 @@ export const ForwardCell = (props: ForwardCellProps) => {
     const theme = useColorScheme();
     const highlight = theme === "dark" ? dark : light;
 
-    // Reanimated pressed value (0 → 1)
     const pressed = useSharedValue(0);
 
     const rStyle = useAnimatedStyle(() => ({
@@ -95,7 +94,7 @@ export const ForwardCell = (props: ForwardCellProps) => {
                             justifyContent: "space-between",
                             flex: 1,
                             height: "100%",
-                            paddingVertical: 20
+                            paddingVertical: (props.secondaryIcon && props.showNextArrow ? 20 : 15)
                         },
                         props.showLine
                             ? {
