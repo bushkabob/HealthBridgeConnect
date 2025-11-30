@@ -20,6 +20,22 @@ export default function TabLayout() {
 					name="settings"
 					options={{ title: "Settings", headerTransparent: true, headerTitle: "", headerBackButtonDisplayMode: "minimal"}}
 				/>
+				<Stack.Screen
+					name="settings_detailed"
+					options={{ title: "Settings", headerTransparent: true, headerTitle: "", headerBackButtonDisplayMode: "minimal"}}
+				/>
+				<Stack.Screen
+					name="unit"
+					options={{ title: "Unit Selection", headerTransparent: true, headerTitle: "", headerBackButtonDisplayMode: "minimal"}}
+				/>
+				<Stack.Screen
+					name="radius"
+					options={{ title: "Radius", headerTransparent: true, headerTitle: "", headerBackButtonDisplayMode: "minimal"}}
+				/>
+				<Stack.Screen
+					name="acknowledgements"
+					options={{ title: "Acknowledgements", headerTransparent: true, headerTitle: "", headerBackButtonDisplayMode: "minimal"}}
+				/>
 			</Stack>
 		</ThemeProvider>
 	);

@@ -18,6 +18,7 @@ export const Colors = {
     textSecondary: "#7e7e7eff",
     icon: "#5b6470",
     placeholder: "#9ba3af",
+    cellLine: "rgba(60, 60, 67, 0.36)",
 
     // 🎨 Background hierarchy
     background0: "#ffffff", // pure white base
@@ -72,6 +73,7 @@ export const Colors = {
     textSecondary: "#a5acb3",
     icon: "#a0a6ad",
     placeholder: "#6b7280",
+    cellLine: "rgba(84, 84, 88, 0.65)",
 
     // 🎨 Background hierarchy
     background0: "#0d0f10", // pure black-ish

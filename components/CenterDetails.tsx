@@ -202,7 +202,6 @@ const CenterDetails = (props: CenterDetailProps) => {
                         paddingBottom: 100,
                         paddingTop: headerHeight,
                     },
-                    StyleSheet.absoluteFill,
                 ]}
                 scrollEnabled={scrollEnabled}
                 scrollIndicatorInsets={{ top: headerHeight }}
