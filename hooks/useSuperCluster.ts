@@ -35,9 +35,6 @@ export default function useSupercluster(
 
     const [prevZoom, setPrevZoom] = useState<number>(0);
 
-    // NEW: currentZoom state
-    const [currentZoom, setCurrentZoom] = useState<number>(0);
-
     const clusterTimeout = useRef<number | null>(null);
 
     // INIT SUPERCLUSTER
@@ -140,13 +137,14 @@ export default function useSupercluster(
     // BASIC CLUSTER COMPUTATION
     const computeVisibleClusters = useCallback(
         async (targetZoom?: number) => {
+            console.log("rendering clusters!!!")
+
             if (!supercluster || !mapRef.current) return {};
 
             const bounds = await mapRef.current.getMapBoundaries();
             const zoom = targetZoom ?? boundariesToZoom(bounds);
 
-            setPrevZoom(currentZoom);
-            setCurrentZoom(zoom);
+            setPrevZoom(zoom);
 
             const worldBounds: [number, number, number, number] = [
                 -180, -85, 180, 85,
@@ -180,8 +178,6 @@ export default function useSupercluster(
 
             var spiderfiedClusters: Record<number, Center[]> = {};
 
-            console.log("Current zoom: ", zoom)
-
             // AUTO-SPIDERFY LOGIC
             if (zoom >= MAX_ZOOM) {
                 spiderfiedClusters = spiderfyAll(formatted);
@@ -196,9 +192,7 @@ export default function useSupercluster(
             }
             setClusteredDisplayCenters(formatted)
             return spiderfiedClusters;
-        },
-        [supercluster, expandedClusterId]
-    );
+        }, [supercluster])
 
     useEffect(() => {
         computeVisibleClusters();
@@ -218,15 +212,14 @@ export default function useSupercluster(
             }, 200) as unknown as number;
         } else {
             if (clusterTimeout.current) clearTimeout(clusterTimeout.current);
+            clusterTimeout.current = null
         }
-    }, [prevZoom, computeVisibleClusters]);
+    }, [prevZoom, supercluster]);
 
     return {
         supercluster,
         clusteredDisplayCenters,
         prevZoom,
-        currentZoom,
-
         spiderfiedClusters,
         expandedClusterId,
 

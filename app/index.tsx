@@ -53,7 +53,7 @@ export default function Map() {
 
     const [searchRadius, setSearchRadius] = useState<number>(10);
     const [unit, setUnit] = useState<string>("Imperial");
-    const [dialogShown, setDialogShown] = useState<boolean>(false)
+    const [dialogShown, setDialogShown] = useState<boolean>(false);
     const [searchingCenters, setSearchingCenters] = useState<boolean>(false);
     const [useOffset, setUseOffset] = useState(false);
 
@@ -67,7 +67,6 @@ export default function Map() {
         supercluster,
         clusteredDisplayCenters,
         prevZoom,
-        currentZoom,
         spiderfiedClusters,
         expandedClusterId,
         safeComputeClusters,
@@ -163,7 +162,7 @@ export default function Map() {
                 : minZoom;
 
         const zoomToUse = Math.ceil(
-            currentZoom > minZoomMod ? currentZoom : minZoomMod
+            prevZoom > minZoomMod ? prevZoom : minZoomMod
         );
         const lonDelta = 360 / Math.pow(2, zoomToUse);
         const aspectRatio = width / height;
@@ -196,8 +195,6 @@ export default function Map() {
                         val.center["BPHC Assigned Number"] ===
                         detailCenter["BPHC Assigned Number"]
                 );
-                console.log(index);
-                console.log(spiderfiedClusters[expandedId].length);
                 const { deltaLat, deltaLon } = determineDeltas(
                     spiderfiedClusters[expandedId].length,
                     index,
@@ -211,9 +208,8 @@ export default function Map() {
             return { latOffset: latOffset, lonOffset: lonOffset };
         };
 
-        console.log(zoomToUse, currentZoom);
         //If zooming in;
-        if (zoomToUse !== currentZoom) {
+        if (zoomToUse !== prevZoom) {
             computeVisibleClusters(zoomToUse).then((spiderfiedClusters) => {
                 const { latOffset, lonOffset } = determineOffets(
                     spiderfiedClusters,
@@ -248,11 +244,12 @@ export default function Map() {
         });
     };
 
-    const [usePostanimationCallback, setUsePostAnimationCallback] = useState<boolean>(false)
+    const [usePostanimationCallback, setUsePostAnimationCallback] =
+        useState<boolean>(false);
 
     const postAnimationCallback = () => {
         clearSpiderfy();
-        setUsePostAnimationCallback(false)
+        setUsePostAnimationCallback(false);
         safeComputeClusters();
     };
 
@@ -354,8 +351,8 @@ export default function Map() {
                 setSearchRadius(Number("10"));
             }
             const dialogShown = await AsyncStorage.getItem("dialogShown");
-            if(dialogShown === "true") {
-                setDialogShown(true)
+            if (dialogShown === "true") {
+                setDialogShown(true);
             }
         } catch (e) {
             console.log(e);
@@ -388,7 +385,7 @@ export default function Map() {
                   left: safeAreaInsets.left + 20,
               }
             : {
-                  top: safeAreaInsets.top,
+                  top: 0,
                   right: safeAreaInsets.left + 20,
                   bottom: safeAreaInsets.bottom + 15,
                   left: safeAreaInsets.left + 20,
@@ -398,9 +395,9 @@ export default function Map() {
         useRef<ClippedDraggablesHandle>(undefined);
 
     const markDialogShown = () => {
-        setDialogShown(true)
-        AsyncStorage.setItem("dialogShown", "true")
-    }
+        setDialogShown(true);
+        AsyncStorage.setItem("dialogShown", "true");
+    };
 
     return (
         <View
@@ -421,19 +418,19 @@ export default function Map() {
                         locationColor !== "gray" && setLocationColor("gray");
                     }}
                     onRegionChangeComplete={(region) => {
-                        const currentZoom = Math.ceil(deltasToZoom(region.latitudeDelta, region.longitudeDelta))
                         onRegionChangeCompleteHandler();
-                        console.log(
-                            prevZoom,
-                            currentZoom,
-                            currentZoom <= MAX_ZOOM
+                        const currentZoom = Math.ceil(
+                            deltasToZoom(
+                                region.latitudeDelta,
+                                region.longitudeDelta
+                            )
                         );
                         if (expandedClusterId !== null) {
-                            if(currentZoom < MAX_ZOOM) {
+                            if (currentZoom < MAX_ZOOM) {
                                 requestAnimationFrame(() => {
                                     closeCluster();
                                 });
-                                setUsePostAnimationCallback(true)
+                                setUsePostAnimationCallback(true);
                             }
                         } else {
                             safeComputeClusters();
@@ -449,10 +446,10 @@ export default function Map() {
                     showsMyLocationButton={false}
                     showsUserLocation
                     initialRegion={INITIAL_REGION}
+                    showsCompass={false}
                 >
                     {clusteredDisplayCenters.map((item) => {
                         if (item.type === "cluster") {
-                            // console.log(spiderfiedClusters)
                             const spiderfied = Object.keys(
                                 spiderfiedClusters
                             ).includes(item.id.toString());
@@ -549,6 +546,7 @@ export default function Map() {
                             returnToUser={() =>
                                 getCurrentLocation(moveToLocation)
                             }
+                            mapRef={mapRef}
                         />
                     }
                     clippedContent={

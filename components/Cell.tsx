@@ -1,5 +1,6 @@
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { ReactNode } from "react";
 import { Pressable, Text, useColorScheme, View } from "react-native";
 import Animated, {
@@ -17,6 +18,7 @@ interface ForwardCellProps {
     showNextArrow: boolean;
     secondaryIcon?: any;
     color?: string;
+    color2?: string;
 }
 
 export const ForwardCell = (props: ForwardCellProps) => {
@@ -66,25 +68,44 @@ export const ForwardCell = (props: ForwardCellProps) => {
                     },
                 ]}
             >
-                {props.secondaryIcon && props.showNextArrow && (
-                    <View
-                        style={{
-                            alignItems: "center",
-                            justifyContent: "center",
-                            width: 40,
-                            height: 40,
-                            backgroundColor: props.color,
-                            borderRadius: 20,
-                        }}
-                    >
-                        <Ionicons
-                            size={24}
-                            name={props.secondaryIcon}
-                            color={props.color ? "white" : textColor}
-                            style={{}}
-                        />
-                    </View>
-                )}
+                {props.secondaryIcon &&
+                    props.showNextArrow &&
+                    (props.color && props.color2 ? (
+                        <LinearGradient
+                            style={{
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: 40,
+                                height: 40,
+                                backgroundColor: props.color,
+                                borderRadius: 20,
+                            }}
+                            colors={[props.color, props.color2]}
+                        >
+                            <Ionicons
+                                size={24}
+                                name={props.secondaryIcon}
+                                color={props.color ? "white" : textColor}
+                            />
+                        </LinearGradient>
+                    ) : (
+                        <View
+                            style={{
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: 40,
+                                height: 40,
+                                backgroundColor: props.color,
+                                borderRadius: 20,
+                            }}
+                        >
+                            <Ionicons
+                                size={24}
+                                name={props.secondaryIcon}
+                                color={props.color ? "white" : textColor}
+                            />
+                        </View>
+                    ))}
                 <View
                     style={[
                         {
@@ -94,7 +115,10 @@ export const ForwardCell = (props: ForwardCellProps) => {
                             justifyContent: "space-between",
                             flex: 1,
                             height: "100%",
-                            paddingVertical: (props.secondaryIcon && props.showNextArrow ? 20 : 15)
+                            paddingVertical:
+                                props.secondaryIcon && props.showNextArrow
+                                    ? 20
+                                    : 15,
                         },
                         props.showLine
                             ? {
@@ -113,37 +137,37 @@ export const ForwardCell = (props: ForwardCellProps) => {
                     >
                         {props.text}
                     </Text>
-                     <View
-                    style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 10,
-                    }}
-                >
-                    <Text
+                    <View
                         style={{
-                            fontWeight: "400",
-                            fontSize: 16,
-                            color: secondaryTextColor,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: 10,
                         }}
                     >
-                        {props.textSecondary}
-                    </Text>
-                    {props.showNextArrow && (
-                        <Ionicons
-                            size={22}
-                            name="chevron-forward"
-                            color={textColor}
-                        />
-                    )}
-                    {props.secondaryIcon && !props.showNextArrow && (
-                        <Ionicons
-                            size={20}
-                            name={props.secondaryIcon}
-                            color={textColor}
-                        />
-                    )}
-                </View>
+                        <Text
+                            style={{
+                                fontWeight: "400",
+                                fontSize: 16,
+                                color: secondaryTextColor,
+                            }}
+                        >
+                            {props.textSecondary}
+                        </Text>
+                        {props.showNextArrow && (
+                            <Ionicons
+                                size={22}
+                                name="chevron-forward"
+                                color={textColor}
+                            />
+                        )}
+                        {props.secondaryIcon && !props.showNextArrow && (
+                            <Ionicons
+                                size={20}
+                                name={props.secondaryIcon}
+                                color={textColor}
+                            />
+                        )}
+                    </View>
                 </View>
             </Animated.View>
         </Pressable>

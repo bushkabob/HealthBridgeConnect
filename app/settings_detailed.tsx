@@ -82,7 +82,8 @@ const SettingsDetailed = () => {
                             func={pushToUnitSelection}
                             showLine
                             showNextArrow
-                            color="rgba(25, 17, 255, 1)"
+                            color="rgba(102, 175, 255, 1)"
+                            color2="rgba(10, 132, 255, 1)"
                             secondaryIcon={"globe-outline"}
                             textSecondary={unit}
                         />
@@ -90,7 +91,8 @@ const SettingsDetailed = () => {
                             text="Search Radius"
                             func={pushToRadiusSelection}
                             showNextArrow
-                            color="rgba(13, 202, 0, 1)"
+                            color="rgba(117, 227, 138, 1)"
+                            color2="rgba(48, 209, 88, 1)"
                             secondaryIcon={"search-outline"}
                             textSecondary={searchRadius + (unit === "Imperial" ? " mi" : " km")}
                             showLine={false}

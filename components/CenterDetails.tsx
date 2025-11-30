@@ -8,6 +8,7 @@ import {
     Linking,
     Platform,
     Pressable,
+    Share,
     StyleSheet,
     Text,
     View,
@@ -65,14 +66,20 @@ const CenterDetails = (props: CenterDetailProps) => {
             ? ""
             : `${props.center["Site Address"]}, ${props.center["Site City"]}, ${props.center["Site State Abbreviation"]} ${props.center["Site Postal Code"]}`;
 
+    const encoded = encodeURIComponent(address);
+
+    const url =
+        Platform.select({
+            ios: `https://maps.apple.com/?q=${encoded}`,
+        }) || `https://www.google.com/maps/search/?api=1&query=${encoded}`;
+
     const openInMaps = () => {
-        const encoded = encodeURIComponent(address);
-        const url =
+        const openInUrl =
             Platform.select({
                 ios: `maps:0,0?q=${encoded}`,
                 android: `geo:0,0?q=${encoded}`,
             }) || `https://www.google.com/maps/search/?api=1&query=${encoded}`;
-        Linking.openURL(url);
+        Linking.openURL(openInUrl);
     };
 
     let operatesYearRound = "Unknown";
@@ -127,6 +134,15 @@ const CenterDetails = (props: CenterDetailProps) => {
         return { intensity };
     });
 
+    const sharing = async () => {
+        Share.share({ message: url }).catch(() => {
+            Alert.alert(
+                "Sharing Error",
+                "Sharing this site failed. Please try again."
+            );
+        });
+    };
+
     return (
         <>
             <View style={{ width: "100%", borderRadius: 40 }}>
@@ -154,7 +170,7 @@ const CenterDetails = (props: CenterDetailProps) => {
                             height: headerHeight,
                         }}
                     >
-                        <Pressable>
+                        <Pressable onPress={sharing}>
                             <GlassView
                                 isInteractive
                                 tintColor={searchBackground}
