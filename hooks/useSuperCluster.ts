@@ -112,7 +112,6 @@ export default function useSupercluster(
 
     const expandCluster = useCallback(
         (clusterId: number) => {
-            console.log(clusterId);
             if (expandedClusterId === clusterId) return;
             setExpandedClusterId(null);
             requestAnimationFrame(() => {
@@ -130,6 +129,7 @@ export default function useSupercluster(
     }, [expandedClusterId]);
 
     const clearSpiderfy = useCallback(() => {
+        console.log("cleared!")
         setExpandedClusterId(null);
         setSpiderfiedClusters({})
     }, []);
@@ -181,15 +181,10 @@ export default function useSupercluster(
             // AUTO-SPIDERFY LOGIC
             if (zoom >= MAX_ZOOM) {
                 spiderfiedClusters = spiderfyAll(formatted);
-
-                // expand first cluster if none expanded
-                if (expandedClusterId == null) {
-                    const firstCluster = formatted.find(
-                        (c) => c.type === "cluster"
-                    );
-                    if (firstCluster) setExpandedClusterId(firstCluster.id);
-                }
             }
+            // } else if(Object.keys(spiderfiedClusters).length > 0 || expandedClusterId !== null) {
+            //     clearSpiderfy()
+            // }
             setClusteredDisplayCenters(formatted)
             return spiderfiedClusters;
         }, [supercluster])

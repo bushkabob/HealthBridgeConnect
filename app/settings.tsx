@@ -37,6 +37,10 @@ const Settings = () => {
         router.push("/acknowledgements");
     };
 
+    const navigateToFAQ = () => {
+        router.push("/faq")
+    }
+
     return (
         <View
             style={{
@@ -87,7 +91,7 @@ const Settings = () => {
                     >
                         <View style={[styles.shadowOverflow]} >
                             <ForwardCell
-                                func={()=>{}}
+                                func={navigateToFAQ}
                                 text="FAQ"
                                 showLine
                                 showNextArrow

@@ -67,11 +67,6 @@ export default function SpiderfyCluster(props: Props) {
                 duration: props.duration,
             }, () => {if(props.mustClose){runOnJS(props.postMustClose)()}});
         });
-
-        // if (!props.expanded) {
-        //     // console.log("callback")
-        //     // setTimeout(()=>{props.callback()}, props.duration);
-        // }
     }, [props.expanded, props.mustClose]);
 
     return (
@@ -89,7 +84,7 @@ export default function SpiderfyCluster(props: Props) {
                 const maxRotation = (120 * Math.PI) / 180; // 120° in radians
 
                 const animatedProps = useAnimatedProps(() => {
-                    const t = p.progress.value; // 0 →
+                    const t = p.progress.value;
                     // spiral reduces as t → 1
                     const spiralAngle = maxRotation * (1 - t);
                     // linear interpolation to target delta
@@ -118,7 +113,8 @@ export default function SpiderfyCluster(props: Props) {
 
                 return (
                     <CenterMarker
-                        center={p.item.center}
+                        id={p.item.center["BPHC Assigned Number"]}
+                        iconName={p.item.center["Health Center Location Type Description"] === "Mobile Van" ? "car" : "medical"}
                         onPress={() => props.onPressCenter(p.item.center)}
                         selected={p.id === props.selected}
                         key={p.id}

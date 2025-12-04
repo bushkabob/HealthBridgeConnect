@@ -1,4 +1,3 @@
-import { FQHCSite } from "@/types/types";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect } from "react";
@@ -11,7 +10,8 @@ import Animated, {
 } from "react-native-reanimated";
 
 interface CenterMarkerProps {
-    center: FQHCSite;
+    id: string;
+    iconName: string;
     onPress: Function;
     selected: boolean;
     coordinate: LatLng;
@@ -31,7 +31,6 @@ const CenterMarker = (props: CenterMarkerProps) => {
         return {
             height: scale.value * 40,
             width: scale.value * 40,
-            // borderWidth: scale.value * 2
         };
     });
 
@@ -52,8 +51,8 @@ const CenterMarker = (props: CenterMarkerProps) => {
                 e.stopPropagation();
                 e.preventDefault();
             }}
-            key={props.center["BPHC Assigned Number"]}
-            id={props.center["BPHC Assigned Number"]}
+            key={props.id}
+            id={props.id}
             coordinate={props.coordinate}
             animatedProps={props.animateProps}
             style={[props.animatedStyle, {width: 60, height: 60, justifyContent: "center", alignItems: "center"}]}
@@ -72,7 +71,7 @@ const CenterMarker = (props: CenterMarkerProps) => {
                         }, animatedStyle]}
                     >
                         <LinearGradient style={StyleSheet.absoluteFill} colors={["#ff7878ff","#ff4545ff"]}/>
-                        <AniamtedIcon name="medical" style={animatedProps} size={22} color="white" />
+                        <AniamtedIcon name={props.iconName as any} style={animatedProps} size={22} color="white" />
                     </Animated.View>
                 </View>
         </AnimatedMarker>

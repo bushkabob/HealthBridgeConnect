@@ -4,8 +4,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Slider from "@react-native-community/slider";
 import { getDefaultHeaderHeight } from "@react-navigation/elements";
 import { useLayoutEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaFrame, useSafeAreaInsets } from "react-native-safe-area-context";
+import { styles } from "./styles";
 
 const RadiusSelection = () => {
     const frame = useSafeAreaFrame();
@@ -71,31 +72,3 @@ const RadiusSelection = () => {
 };
 
 export default RadiusSelection;
-
-const styles = StyleSheet.create({
-    shadow: {
-        margin: 10,
-        padding: 20,
-        borderRadius: 20,
-        shadowColor: "#000",
-        shadowOffset: {
-            width: 0,
-            height: 1,
-        },
-        shadowOpacity: 0.22,
-        shadowRadius: 2.22,
-
-        elevation: 3,
-        gap: 10,
-    },
-    contentView: {
-        marginTop: 30,
-    },
-    row: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        gap: 10,
-        padding: 10,
-        margin: 10,
-    },
-});

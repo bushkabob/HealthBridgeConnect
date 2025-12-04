@@ -177,29 +177,66 @@ export const ForwardCell = (props: ForwardCellProps) => {
 interface CellProps {
     children: ReactNode;
     showLine: boolean;
+    func?: ()=>void
 }
 
 const Cell = (props: CellProps) => {
     const lineColor = useThemeColor({}, "cellLine");
 
+    const light = "rgba(60,60,67,0.1)";
+    const dark = "rgba(235,235,245,0.1)";
+
+    const theme = useColorScheme();
+    const highlight = theme === "dark" ? dark : light;
+
+    const pressed = useSharedValue(0);
+
+    const rStyle = useAnimatedStyle(() => ({
+        backgroundColor: interpolateColor(
+            pressed.value,
+            [0, 1],
+            ["transparent", highlight]
+        ),
+    }));
+
+    const onPressIn = () => {
+        pressed.value = withTiming(1, { duration: 120 });
+    };
+
+    const onPressOut = () => {
+        pressed.value = withTiming(0, { duration: 160 });
+    };
+
     return (
-        <View
-            style={[
-                {
-                    flexDirection: "row",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                },
-                props.showLine
-                    ? {
-                          borderBottomColor: lineColor,
-                          borderBottomWidth: 1,
-                      }
-                    : {},
-            ]}
+        <Pressable
+            onPress={props.func}
+            onPressIn={props.func ? onPressIn : undefined}
+            onPressOut={props.func ? onPressOut : undefined}
+            android_ripple={{ color: highlight }}
         >
-            {props.children}
-        </View>
+            <Animated.View style={rStyle} >
+                <View
+                style={[
+                    {
+                        flexDirection: "row",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginHorizontal: 20,
+                        paddingVertical: 20
+                    },
+                    props.showLine
+                        ? {
+                            borderBottomColor: lineColor,
+                            borderBottomWidth: 1,
+                        }
+                        : {},
+                ]}
+            >
+                {props.children}
+            </View>
+            </Animated.View>
+            
+        </Pressable>
     );
 };
 

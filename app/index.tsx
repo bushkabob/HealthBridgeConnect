@@ -23,7 +23,7 @@ import {
     deltasToZoom,
     getMinZoomForPoint,
     haversineDistance,
-    useAwaitableMapAnimation,
+    useAwaitableMapAnimation
 } from "./utils";
 
 const INITIAL_REGION = {
@@ -428,6 +428,7 @@ export default function Map() {
                         if (expandedClusterId !== null) {
                             if (currentZoom < MAX_ZOOM) {
                                 requestAnimationFrame(() => {
+                                    console.log("Closing cluster");
                                     closeCluster();
                                 });
                                 setUsePostAnimationCallback(true);
@@ -465,10 +466,34 @@ export default function Map() {
                                     duration={300}
                                     expanded={expandedClusterId === item.id}
                                     onPress={() => {
-                                        if (expandedClusterId === item.id) {
-                                            closeCluster();
+                                        if (prevZoom < MAX_ZOOM) {
+                                            const lonDelta =
+                                            360 / Math.pow(2, MAX_ZOOM);
+                                            const aspectRatio = width / height;
+                                            const latDelta = lonDelta / aspectRatio;
+                                            animateToRegionAsync({ 
+                                                latitude: item.coordinate.latitude,
+                                                longitude: item.coordinate.longitude,
+                                                latitudeDelta: latDelta,
+                                                longitudeDelta: lonDelta
+                                             }, 300).then(
+                                                () => {
+                                                    if (
+                                                        expandedClusterId ===
+                                                        item.id
+                                                    ) {
+                                                        closeCluster();
+                                                    } else {
+                                                        expandCluster(item.id);
+                                                    }
+                                                }
+                                            );
                                         } else {
-                                            expandCluster(item.id);
+                                            if (expandedClusterId === item.id) {
+                                                closeCluster();
+                                            } else {
+                                                expandCluster(item.id);
+                                            }
                                         }
                                     }}
                                     onPressCenter={(val: FQHCSite) =>
@@ -521,7 +546,8 @@ export default function Map() {
                             return (
                                 <CenterMarker
                                     key={item.id}
-                                    center={item.center}
+                                    id={item.id}
+                                    iconName={item.center["Health Center Location Type Description"] === "Mobile Van" ? "car" : "medical"}
                                     selected={
                                         item.id ===
                                         detailCenter?.["BPHC Assigned Number"]

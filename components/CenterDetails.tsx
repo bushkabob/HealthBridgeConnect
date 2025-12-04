@@ -2,6 +2,7 @@ import { AnimatedBlurView } from "@/app/utils";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { Ionicons } from "@expo/vector-icons";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
+import { ExternalPathString, Link } from "expo-router";
 import { useEffect, useRef } from "react";
 import {
     Alert,
@@ -72,13 +73,14 @@ const CenterDetails = (props: CenterDetailProps) => {
         Platform.select({
             ios: `https://maps.apple.com/?q=${encoded}`,
         }) || `https://www.google.com/maps/search/?api=1&query=${encoded}`;
-
-    const openInMaps = () => {
-        const openInUrl =
+    
+    const openInUrl =
             Platform.select({
                 ios: `maps:0,0?q=${encoded}`,
                 android: `geo:0,0?q=${encoded}`,
             }) || `https://www.google.com/maps/search/?api=1&query=${encoded}`;
+
+    const openInMaps = () => {
         Linking.openURL(openInUrl);
     };
 
@@ -206,6 +208,7 @@ const CenterDetails = (props: CenterDetailProps) => {
                         </Text>
                         <Pressable
                             onPress={() => {
+                                scrollToTop()
                                 props.close();
                             }}
                         >
@@ -363,6 +366,7 @@ const CenterDetails = (props: CenterDetailProps) => {
                                     title="Telephone"
                                     titleColor={titleColor}
                                     text={props.center["Site Telephone Number"]}
+                                    linkHref={"tel:"+props.center["Site Telephone Number"] as ExternalPathString}
                                     textColor={textColor}
                                 />
                             )}
@@ -372,6 +376,7 @@ const CenterDetails = (props: CenterDetailProps) => {
                                         title="Website"
                                         titleColor={titleColor}
                                         text={props.center["Site Web Address"]}
+                                        linkHref={"https://"+props.center["Site Web Address"] as ExternalPathString}
                                         textColor={textColor}
                                     />
                                 )}
@@ -410,6 +415,7 @@ const CenterDetails = (props: CenterDetailProps) => {
                                 titleColor={titleColor}
                                 text={address}
                                 textColor={textColor}
+                                linkHref={openInUrl as ExternalPathString}
                             />
                         </View>
                         <View style={[styles.infoSection]}>
@@ -548,6 +554,7 @@ interface DetailRowProps {
     text: string;
     titleColor: string;
     textColor: string;
+    linkHref?: ExternalPathString;
     hasIcon?: boolean;
     icon?: any;
 }
@@ -565,9 +572,17 @@ const DetailRow = (props: DetailRowProps) => {
                     justifyContent: "flex-end",
                 }}
             >
-                <Text style={{ textAlign: "right", color: props.textColor }}>
-                    {props.text}
-                </Text>
+                {props.linkHref ?
+                    <Link href={props.linkHref} >
+                        <Text style={{ textAlign: "right", color: "#0A84FF" }}>
+                        {props.text}
+                    </Text>
+                    </Link>
+                    :
+                    <Text style={{ textAlign: "right", color: props.textColor }}>
+                        {props.text}
+                    </Text>
+                }
                 {props.hasIcon && (
                     <Ionicons
                         size={28}
