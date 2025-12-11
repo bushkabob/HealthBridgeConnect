@@ -29,16 +29,23 @@ const CenterMarker = (props: CenterMarkerProps) => {
     const scale = useSharedValue(1);
     // Reanimated style
     const animatedStyle = useAnimatedStyle(() => {
+        // Remove transformOrigin and use translateX/translateY to center the scale
+        const size = 40;
+        const scaleValue = scale.value;
+
         return {
-            transformOrigin: "center",
-            transform: [{ scale: scale.value }],
+            transform: [
+                // { translateX: (size * (scaleValue)) / 2 },
+                // { translateY: (size * (scaleValue)) / 2 },
+                { scale: scaleValue },
+            ],
         };
     });
 
     useEffect(() => {
-        if (version !== "1.20.1") {
-            scale.value = props.selected ? withTiming(1.5) : withTiming(1);
-        }
+        // if (version !== "1.20.1") {
+        scale.value = props.selected ? withTiming(1.5) : withTiming(1);
+        // }
     }, [props.selected]);
 
     return (
@@ -52,7 +59,14 @@ const CenterMarker = (props: CenterMarkerProps) => {
             id={props.id}
             coordinate={props.coordinate}
             animatedProps={props.animateProps}
-            style={[{ justifyContent: "center", alignItems: "center", height: 40, width: 40 }]}
+            style={[
+                {
+                    justifyContent: "center",
+                    alignItems: "center",
+                    height: 40,
+                    width: 40,
+                },
+            ]}
         >
             <Animated.View
                 style={[
@@ -65,7 +79,7 @@ const CenterMarker = (props: CenterMarkerProps) => {
                         overflow: "hidden",
                     },
                     animatedStyle,
-                    version !== "1.20.1" ? props.animatedStyle : {},
+                    props.animatedStyle,
                 ]}
             >
                 <LinearGradient

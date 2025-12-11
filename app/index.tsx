@@ -272,6 +272,7 @@ export default function Map() {
     //Search when unit, map center, or search radius changes
     useEffect(() => {
         setSearchingCenters(true);
+        console.log("nearby determined!")
         allCenters.length > 0 &&
             currentCenter !== undefined &&
             determineNearbyCenters(

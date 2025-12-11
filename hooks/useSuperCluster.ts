@@ -184,18 +184,19 @@ export default function useSupercluster(
             // AUTO-SPIDERFY LOGIC
             if (zoom >= MAX_ZOOM) {
                 spiderfiedClusters = spiderfyAll(formatted);
-            // }
             } else if(Object.keys(spiderfiedClusters).length > 0 || expandedClusterId !== null) {
                 clearSpiderfy()
             }
             setClusteredDisplayCenters(formatted)
             setLoading(false)
 
+            console.log(formatted.length, " ", unpaddedBounds)
             
             return spiderfiedClusters;
         }, [supercluster])
 
     useEffect(() => {
+        console.log("Compute from cluster update")
         computeVisibleClusters();
     }, [supercluster]);
 
@@ -209,6 +210,7 @@ export default function useSupercluster(
         // if (zoom !== prevZoom) {
         if (clusterTimeout.current) clearTimeout(clusterTimeout.current);
         clusterTimeout.current = setTimeout(() => {
+            console.log("Compute from timeut")
             computeVisibleClusters();
         }, 200) as unknown as number;
         // } else {
