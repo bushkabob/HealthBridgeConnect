@@ -20,7 +20,6 @@ interface CenterMarkerProps {
     animatedStyle?: any;
 }
 
-const AniamtedIcon = Animated.createAnimatedComponent(Ionicons);
 const AnimatedMarker = Animated.createAnimatedComponent(Marker);
 
 const { version } = require("react-native-maps/package.json");
@@ -53,7 +52,7 @@ const CenterMarker = (props: CenterMarkerProps) => {
             id={props.id}
             coordinate={props.coordinate}
             animatedProps={props.animateProps}
-            style={[{ justifyContent: "center", alignItems: "center" }]}
+            style={[{ justifyContent: "center", alignItems: "center", height: 40, width: 40 }]}
         >
             <Animated.View
                 style={[
@@ -65,7 +64,7 @@ const CenterMarker = (props: CenterMarkerProps) => {
                         borderRadius: 60,
                         overflow: "hidden",
                     },
-                     animatedStyle,
+                    animatedStyle,
                     version !== "1.20.1" ? props.animatedStyle : {},
                 ]}
             >
@@ -73,7 +72,7 @@ const CenterMarker = (props: CenterMarkerProps) => {
                     style={StyleSheet.absoluteFill}
                     colors={["#ff7878ff", "#ff4545ff"]}
                 />
-                <AniamtedIcon
+                <Ionicons
                     name={props.iconName as any}
                     size={22}
                     color="white"

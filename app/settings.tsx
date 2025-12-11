@@ -77,8 +77,7 @@ const Settings = () => {
                             About
                         </Text>
                         <Text style={{ color: themeColor }}>
-                            Distributed by HealthBridge Labs LLC. under the MIT
-                            License
+                            Distributed under the MIT License
                         </Text>
                     </View>
                     <View

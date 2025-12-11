@@ -1,4 +1,4 @@
-import { AnimatedBlurView, haversineDistance, levenshtein } from "@/app/utils";
+import { AnimatedBlurView, haversineDistance } from "@/app/utils";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { City, FQHCSite, MapCenter } from "@/types/types";
 import React, { RefObject, useEffect, useRef, useState } from "react";
@@ -148,29 +148,30 @@ const DraggableContent = (props: DraggableContentProps) => {
         }
 
         //Fuzzy fallback
-        const fuzzyResults = cityKeys
-            .slice(0, 1000)
-            .map((k) => ({
-                key: k,
-                dist: levenshtein(k, q),
-            }))
-            .sort((a, b) => a.dist - b.dist)
-            .slice(0, 5);
+        // const fuzzyResults = cityKeys
+        //     .slice(0, 1000)
+        //     .map((k) => ({
+        //         key: k,
+        //         dist: levenshtein(k, q),
+        //     }))
+        //     .sort((a, b) => a.dist - b.dist)
+        //     .slice(0, 5);
 
-        return fuzzyResults.map(({ key }) => ({
-            name: key
-                .split(",")
-                .map((x) => x.trim().replace(/^\w/, (c) => c.toUpperCase()))
-                .join(", "),
-            lat: cities[key].lat,
-            lon: cities[key].lon,
-            distance: haversineDistance(
-                cities[key].lat,
-                cities[key].lon,
-                currentCenter.lat,
-                currentCenter.lon
-            ),
-        }));
+        // return fuzzyResults.map(({ key }) => ({
+        //     name: key
+        //         .split(",")
+        //         .map((x) => x.trim().replace(/^\w/, (c) => c.toUpperCase()))
+        //         .join(", "),
+        //     lat: cities[key].lat,
+        //     lon: cities[key].lon,
+        //     distance: haversineDistance(
+        //         cities[key].lat,
+        //         cities[key].lon,
+        //         currentCenter.lat,
+        //         currentCenter.lon
+        //     ),
+        // }));
+        return []
     };
 
     //Load initial cities
@@ -199,7 +200,6 @@ const DraggableContent = (props: DraggableContentProps) => {
                         
                         stateObject.cities.forEach((city: any) => {
                             const cityName = city.name.toLowerCase().replaceAll(" ", "")
-                            console.log(cityName)
                             textCoords[city.name + ", " + stateObject.name] = {
                                 alternatives: [cityName + stateName, cityName + stateAbbreviation, stateName + cityName, stateAbbreviation + cityName],
                                 lat: Number(city.latitude),

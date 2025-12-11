@@ -191,7 +191,7 @@ export default function useSupercluster(
             setClusteredDisplayCenters(formatted)
             setLoading(false)
 
-            console.log(formatted.length)
+            
             return spiderfiedClusters;
         }, [supercluster])
 
