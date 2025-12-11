@@ -197,6 +197,7 @@ export default function useSupercluster(
 
     useEffect(() => {
         console.log("Compute from cluster update")
+        if (clusterTimeout.current) clearTimeout(clusterTimeout.current);
         computeVisibleClusters();
     }, [supercluster]);
 
