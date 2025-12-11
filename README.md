@@ -1,4 +1,4 @@
-# 🏥 FQHC Locator App
+# 🏥 HealthBridge: Connect
 
 An **Expo-powered React Native** application that helps users find **Federally Qualified Health Centers (FQHCs)** across the United States.  
 The app provides an interactive map interface, searchable list of locations, and details on each center without requiring an internet connection.

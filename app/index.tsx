@@ -23,7 +23,7 @@ import {
     deltasToZoom,
     getMinZoomForPoint,
     haversineDistance,
-    useAwaitableMapAnimation
+    useAwaitableMapAnimation,
 } from "./utils";
 
 const INITIAL_REGION = {
@@ -63,6 +63,22 @@ export default function Map() {
     const { animateToRegionAsync, onRegionChangeCompleteHandler } =
         useAwaitableMapAnimation(mapRef);
 
+    const safeAreaInsets = useSafeAreaInsets();
+    const MAP_OFFSET =
+        Platform.OS === "android"
+            ? {
+                  top: safeAreaInsets.top,
+                  right: safeAreaInsets.right + 20,
+                  bottom: safeAreaInsets.bottom + 60,
+                  left: safeAreaInsets.left + 20,
+              }
+            : {
+                  top: 0,
+                  right: safeAreaInsets.right + 20,
+                  bottom: safeAreaInsets.bottom + 15,
+                  left: safeAreaInsets.left + 20,
+              };
+
     const {
         supercluster,
         clusteredDisplayCenters,
@@ -74,7 +90,7 @@ export default function Map() {
         closeCluster,
         clearSpiderfy,
         computeVisibleClusters,
-    } = useSupercluster(displayCenters, mapRef);
+    } = useSupercluster(displayCenters, MAP_OFFSET, mapRef, setSearchingCenters);
 
     //Loads data from db
     useEffect(() => {
@@ -116,7 +132,7 @@ export default function Map() {
                     val.distance * (unit === "Imperial" ? 0.621371 : 1) <
                     searchRadius
             )
-            .sort((a, b) => a.distance - b.distance);
+            .sort((a, b) => a.distance - b.distance).slice(0,100);
         setNearbyCenters(filteredCenters);
     };
 
@@ -375,22 +391,6 @@ export default function Map() {
                 });
     };
 
-    const safeAreaInsets = useSafeAreaInsets();
-    const MAP_OFFSET =
-        Platform.OS === "android"
-            ? {
-                  top: safeAreaInsets.top,
-                  right: safeAreaInsets.right + 20,
-                  bottom: safeAreaInsets.bottom + 60,
-                  left: safeAreaInsets.left + 20,
-              }
-            : {
-                  top: 0,
-                  right: safeAreaInsets.left + 20,
-                  bottom: safeAreaInsets.bottom + 15,
-                  left: safeAreaInsets.left + 20,
-              };
-
     const draggableOverlapImperatives =
         useRef<ClippedDraggablesHandle>(undefined);
 
@@ -462,32 +462,39 @@ export default function Map() {
                                         longitude: item.coordinate.longitude,
                                     }}
                                     items={spiderfiedClusters[item.id]}
+                                    selected={detailCenter?.["BPHC Assigned Number"]}
                                     radius={10}
                                     duration={300}
                                     expanded={expandedClusterId === item.id}
                                     onPress={() => {
                                         if (prevZoom < MAX_ZOOM) {
                                             const lonDelta =
-                                            360 / Math.pow(2, MAX_ZOOM);
+                                                360 / Math.pow(2, MAX_ZOOM);
                                             const aspectRatio = width / height;
-                                            const latDelta = lonDelta / aspectRatio;
-                                            animateToRegionAsync({ 
-                                                latitude: item.coordinate.latitude,
-                                                longitude: item.coordinate.longitude,
-                                                latitudeDelta: latDelta,
-                                                longitudeDelta: lonDelta
-                                             }, 300).then(
-                                                () => {
-                                                    if (
-                                                        expandedClusterId ===
-                                                        item.id
-                                                    ) {
-                                                        closeCluster();
-                                                    } else {
-                                                        expandCluster(item.id);
-                                                    }
+                                            const latDelta =
+                                                lonDelta / aspectRatio;
+                                            animateToRegionAsync(
+                                                {
+                                                    latitude:
+                                                        item.coordinate
+                                                            .latitude,
+                                                    longitude:
+                                                        item.coordinate
+                                                            .longitude,
+                                                    latitudeDelta: latDelta,
+                                                    longitudeDelta: lonDelta,
+                                                },
+                                                300
+                                            ).then(() => {
+                                                if (
+                                                    expandedClusterId ===
+                                                    item.id
+                                                ) {
+                                                    closeCluster();
+                                                } else {
+                                                    expandCluster(item.id);
                                                 }
-                                            );
+                                            });
                                         } else {
                                             if (expandedClusterId === item.id) {
                                                 closeCluster();
@@ -547,7 +554,13 @@ export default function Map() {
                                 <CenterMarker
                                     key={item.id}
                                     id={item.id}
-                                    iconName={item.center["Health Center Location Type Description"] === "Mobile Van" ? "car" : "medical"}
+                                    iconName={
+                                        item.center[
+                                            "Health Center Location Type Description"
+                                        ] === "Mobile Van"
+                                            ? "car"
+                                            : "medical"
+                                    }
                                     selected={
                                         item.id ===
                                         detailCenter?.["BPHC Assigned Number"]
@@ -613,7 +626,6 @@ export default function Map() {
                     }
                     ref={draggableOverlapImperatives}
                 />
-                {/*Cover whole screen, always be on top, but let touches through*/}
             </GestureHandlerRootView>
         </View>
     );

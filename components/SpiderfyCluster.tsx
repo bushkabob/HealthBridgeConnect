@@ -81,16 +81,12 @@ export default function SpiderfyCluster(props: Props) {
             />
 
             {animatedPoints.map((p) => {
-                const maxRotation = (120 * Math.PI) / 180; // 120° in radians
-
+                const maxRotation = (120 * Math.PI) / 180;
                 const animatedProps = useAnimatedProps(() => {
                     const t = p.progress.value;
-                    // spiral reduces as t → 1
                     const spiralAngle = maxRotation * (1 - t);
-                    // linear interpolation to target delta
                     const latDelta = p.targetLat - props.origin.latitude;
                     const lonDelta = p.targetLon - props.origin.longitude;
-                    // apply spiral rotation
                     const rotatedLat =
                         latDelta * Math.cos(spiralAngle) -
                         lonDelta * Math.sin(spiralAngle);
@@ -110,7 +106,6 @@ export default function SpiderfyCluster(props: Props) {
                         opacity: p.progress.value,
                     };
                 });
-
                 return (
                     <CenterMarker
                         id={p.item.center["BPHC Assigned Number"]}

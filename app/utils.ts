@@ -1,6 +1,6 @@
 import { BlurView } from "expo-blur";
 import { Dimensions } from "react-native";
-import MapView, { Region } from "react-native-maps";
+import MapView, { BoundingBox, EdgePadding, Region } from "react-native-maps";
 import Animated from "react-native-reanimated";
 import Supercluster from "supercluster";
 
@@ -153,6 +153,49 @@ export function zoomFromAltitude(altitudeMeters: number, mapHeightPx: number) {
 import { useRef } from "react";
 
 type Resolver = (() => void) | null;
+
+// meters per pixel at current latitude + zoom
+const metersPerPixel = (lat: number, zoom: number) => {
+    const C = 40075016.686;
+    return (C * Math.cos(lat * Math.PI / 180)) / Math.pow(2, zoom + 8);
+};
+
+// meters → degrees latitude
+const metersToLat = (meters: number) => meters / 111320;
+
+// meters → degrees longitude
+const metersToLon = (meters: number, lat: number) =>
+  meters / (111320 * Math.cos(lat * Math.PI / 180));
+
+
+export const getUnpaddedBoundaries = (paddedBounds: BoundingBox, zoom: number, padding: EdgePadding, additionalPadding?: number) => {
+    const { northEast, southWest } = paddedBounds;
+    const center = {
+        latitude: (northEast.latitude + southWest.latitude) / 2,
+        longitude: (northEast.longitude + southWest.longitude) / 2,
+    };
+
+    const addPadding = additionalPadding ? additionalPadding : 0
+
+    const mpp = metersPerPixel(center.latitude, zoom);
+
+    const topLat = metersToLat((padding.top + addPadding) * mpp);
+    const bottomLat = metersToLat((padding.bottom  + addPadding) * mpp);
+
+    const leftLon = metersToLon((padding.left + addPadding) * mpp, center.latitude);
+    const rightLon = metersToLon((padding.right  + addPadding) * mpp, center.latitude);
+
+    return {
+        northEast: {
+            latitude: northEast.latitude + topLat,
+            longitude: northEast.longitude + rightLon,
+        },
+        southWest: {
+            latitude: southWest.latitude - bottomLat,
+            longitude: southWest.longitude - leftLon,
+        },
+    };
+}
 
 export function useAwaitableMapAnimation(
     mapRef: React.RefObject<MapView | null>,

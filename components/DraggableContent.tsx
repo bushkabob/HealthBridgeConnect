@@ -39,7 +39,7 @@ const DraggableContent = (props: DraggableContentProps) => {
     const [searchArea, setSearchArea] = useState<string>("");
     const [searchActive, setSearchActive] = useState<boolean>(false);
     const [cities, setCities] = useState<{
-        [key: string]: { lat: number; lon: number };
+        [key: string]: { alternatives: string[], lat: number; lon: number };
     }>({});
 
     const { progress, snapping, scrollY, setViewHeight, MIN_HEIGHT } = useFixedDraggable();
@@ -66,11 +66,11 @@ const DraggableContent = (props: DraggableContentProps) => {
         props.setSearchingCenters(true);
         const filteredCenters = centerOptions
             .filter((val) => {
-                const address = `${val["Site Address"]}, ${val["Site City"]}, ${val["Site State Abbreviation"]} ${val["Site Postal Code"]}`;
-                const lowerSearch = searchValue.toLowerCase();
+                const address = (`${val["Site Address"]}, ${val["Site City"]}, ${val["Site State Abbreviation"]} ${val["Site Postal Code"]}`).toLowerCase().replaceAll(" ", "").replaceAll(",", "");
+                const lowerSearch = searchValue.toLowerCase().replaceAll(" ", "");
                 return (
-                    address.toLowerCase().includes(lowerSearch) ||
-                    val["Site Name"].toLowerCase().includes(lowerSearch)
+                    address.includes(lowerSearch) ||
+                    val["Site Name"].toLowerCase().replaceAll(" ", "").includes(lowerSearch)
                 );
             })
             .sort((a, b) => a.distance - b.distance);
@@ -84,12 +84,12 @@ const DraggableContent = (props: DraggableContentProps) => {
     //Debounced search
     useEffect(() => {
         if (props.allCenters.length === 0) return;
-        // create a timeout
         const handler = setTimeout(() => {
             if (searchValue === "") {
                 props.setDisplayCenters(props.nearbyCenters);
                 setDisplayCities([]);
             } else {
+                // TODO - Combine into single search function
                 props.setDisplayCenters(
                     searchCenters(
                         searchArea === "Nearby"
@@ -97,7 +97,7 @@ const DraggableContent = (props: DraggableContentProps) => {
                             : props.allCenters
                     )
                 );
-                const lowerSearch = searchValue.toLowerCase();
+                const lowerSearch = searchValue.toLowerCase().replaceAll(" ", "");
                 searchArea === "Nearby"
                     ? setDisplayCities([])
                     : setDisplayCities(
@@ -107,9 +107,8 @@ const DraggableContent = (props: DraggableContentProps) => {
                           })
                       );
             }
-        }, 250); // <-- debounce delay (ms)
+        }, 250);
 
-        // cleanup (cancel previous timeout if user types again)
         return () => clearTimeout(handler);
     }, [searchValue, props.nearbyCenters, searchArea]);
 
@@ -119,14 +118,14 @@ const DraggableContent = (props: DraggableContentProps) => {
         currentCenter: { lat: number; lon: number }
     ) => {
         if (!query) return [];
-        const q = query.toLowerCase().trim();
+        const q = query.toLowerCase().trim().replaceAll(",", "");
         const cityKeys = Object.keys(cities);
         const directMatches: string[] = [];
 
         for (const key of cityKeys) {
-            if (key.toLowerCase().includes(q)) {
+            if (cities[key].alternatives.filter(val=> val.includes(q)).length > 0) {
                 directMatches.push(key);
-                if (directMatches.length >= 15) break; // limit results
+                if (directMatches.length >= 15) break;
             }
         }
 
@@ -178,35 +177,31 @@ const DraggableContent = (props: DraggableContentProps) => {
     useEffect(() => {
         (async () => {
             const data = (await import("@/assets/cities.json")) as any;
-            const textCoords: { [key: string]: { lat: number; lon: number } } =
+            const textCoords: { [key: string]: { alternatives: string[], lat: number; lon: number } } =
                 {};
             Object.keys(data).forEach((val) => {
                 if (val != "default") {
                     const countryObj = data[val];
                     textCoords[countryObj.name] = {
-                        lat: Number(countryObj["latitude"]),
-                        lon: Number(countryObj["longitude"]),
-                    };
-                    textCoords[countryObj.iso2] = {
-                        lat: Number(countryObj["latitude"]),
-                        lon: Number(countryObj["longitude"]),
-                    };
-                    textCoords[countryObj.iso3] = {
+                        alternatives: [countryObj.name.replaceAll(" ", ""), countryObj.iso2],
                         lat: Number(countryObj["latitude"]),
                         lon: Number(countryObj["longitude"]),
                     };
                     Object.keys(countryObj.states).forEach((state) => {
                         const stateObject = countryObj.states[state];
+                        const stateName = stateObject.name.toLowerCase().replaceAll(" ", "");
+                        const stateAbbreviation = stateObject.state_code.toLowerCase().replaceAll(" ", "");
                         textCoords[stateObject.name] = {
+                            alternatives: [stateName, stateAbbreviation],
                             lat: Number(stateObject.latitude),
                             lon: Number(stateObject.longitude),
                         };
-                        // textCoords[stateObject.state_code] = {
-                        //     lat: Number(stateObject.latitude),
-                        //     lon: Number(stateObject.longitude),
-                        // };
+                        
                         stateObject.cities.forEach((city: any) => {
+                            const cityName = city.name.toLowerCase().replaceAll(" ", "")
+                            console.log(cityName)
                             textCoords[city.name + ", " + stateObject.name] = {
+                                alternatives: [cityName + stateName, cityName + stateAbbreviation, stateName + cityName, stateAbbreviation + cityName],
                                 lat: Number(city.latitude),
                                 lon: Number(city.longitude),
                             };

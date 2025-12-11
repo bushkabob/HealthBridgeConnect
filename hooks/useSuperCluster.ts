@@ -2,8 +2,9 @@ import { FQHCSite } from "@/types/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Dimensions } from "react-native";
 import MapView from "react-native-maps";
+import { EdgeInsets, useSafeAreaInsets } from "react-native-safe-area-context";
 import Supercluster from "supercluster";
-import { boundariesToZoom } from "../app/utils";
+import { boundariesToZoom, getUnpaddedBoundaries } from "../app/utils";
 
 const { width, height } = Dimensions.get("window");
 const MAX_ZOOM = 20;
@@ -26,7 +27,9 @@ export type Center = {
 
 export default function useSupercluster(
     displayCenters: any[],
-    mapRef: React.RefObject<MapView | null>
+    padding: EdgeInsets,
+    mapRef: React.RefObject<MapView | null>,
+    setLoading: Function
 ) {
     const [supercluster, setSupercluster] = useState<Supercluster>();
     const [clusteredDisplayCenters, setClusteredDisplayCenters] = useState<
@@ -34,8 +37,9 @@ export default function useSupercluster(
     >([]);
 
     const [prevZoom, setPrevZoom] = useState<number>(0);
-
     const clusterTimeout = useRef<number | null>(null);
+    const insets = useSafeAreaInsets()
+    const fullyPadded: EdgeInsets = { top: padding.top + insets.top, left: padding.left + insets.left, right: padding.right + insets.right, bottom: padding.bottom + insets.bottom }
 
     // INIT SUPERCLUSTER
     useEffect(() => {
@@ -137,21 +141,20 @@ export default function useSupercluster(
     // BASIC CLUSTER COMPUTATION
     const computeVisibleClusters = useCallback(
         async (targetZoom?: number) => {
-            console.log("rendering clusters!!!")
-
+            setLoading(true)
             if (!supercluster || !mapRef.current) return {};
 
             const bounds = await mapRef.current.getMapBoundaries();
             const zoom = targetZoom ?? boundariesToZoom(bounds);
-
             setPrevZoom(zoom);
 
-            const worldBounds: [number, number, number, number] = [
-                -180, -85, 180, 85,
-            ];
+            // const worldBounds: [number, number, number, number] = [
+            //     -180, -85, 180, 85,
+            // ];
 
-            const clusters = supercluster.getClusters(worldBounds, zoom);
-
+            const unpaddedBounds = getUnpaddedBoundaries(bounds, zoom, fullyPadded, 30)
+            const box: [number, number, number, number] = [unpaddedBounds.southWest.longitude, unpaddedBounds.southWest.latitude, unpaddedBounds.northEast.longitude, unpaddedBounds.northEast.latitude]
+            const clusters = supercluster.getClusters(box, zoom);
             const formatted = clusters.map((item: any) => {
                 if (item.properties.cluster) {
                     return {
@@ -181,11 +184,14 @@ export default function useSupercluster(
             // AUTO-SPIDERFY LOGIC
             if (zoom >= MAX_ZOOM) {
                 spiderfiedClusters = spiderfyAll(formatted);
-            }
-            // } else if(Object.keys(spiderfiedClusters).length > 0 || expandedClusterId !== null) {
-            //     clearSpiderfy()
             // }
+            } else if(Object.keys(spiderfiedClusters).length > 0 || expandedClusterId !== null) {
+                clearSpiderfy()
+            }
             setClusteredDisplayCenters(formatted)
+            setLoading(false)
+
+            console.log(formatted.length)
             return spiderfiedClusters;
         }, [supercluster])
 
@@ -196,19 +202,19 @@ export default function useSupercluster(
     // ZOOM-DEBOUNCED RECALC
     const safeComputeClusters = useCallback(async () => {
         if (!mapRef.current) return;
-
+        setLoading(true)
         const boundaries = await mapRef.current.getMapBoundaries();
         const zoom = boundariesToZoom(boundaries);
 
-        if (zoom !== prevZoom) {
-            if (clusterTimeout.current) clearTimeout(clusterTimeout.current);
-            clusterTimeout.current = setTimeout(() => {
-                computeVisibleClusters();
-            }, 200) as unknown as number;
-        } else {
-            if (clusterTimeout.current) clearTimeout(clusterTimeout.current);
-            clusterTimeout.current = null
-        }
+        // if (zoom !== prevZoom) {
+        if (clusterTimeout.current) clearTimeout(clusterTimeout.current);
+        clusterTimeout.current = setTimeout(() => {
+            computeVisibleClusters();
+        }, 200) as unknown as number;
+        // } else {
+        //     if (clusterTimeout.current) clearTimeout(clusterTimeout.current);
+        //     clusterTimeout.current = null
+        // }
     }, [prevZoom, supercluster]);
 
     return {

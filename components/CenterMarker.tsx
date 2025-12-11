@@ -1,12 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 import { LatLng, Marker } from "react-native-maps";
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
-    withTiming
+    withTiming,
 } from "react-native-reanimated";
 
 interface CenterMarkerProps {
@@ -16,12 +16,14 @@ interface CenterMarkerProps {
     selected: boolean;
     coordinate: LatLng;
     key: string;
-    animateProps?: any
-    animatedStyle?: any
+    animateProps?: any;
+    animatedStyle?: any;
 }
 
-const AniamtedIcon = Animated.createAnimatedComponent(Ionicons)
-const AnimatedMarker = Animated.createAnimatedComponent(Marker)
+const AniamtedIcon = Animated.createAnimatedComponent(Ionicons);
+const AnimatedMarker = Animated.createAnimatedComponent(Marker);
+
+const { version } = require("react-native-maps/package.json");
 
 const CenterMarker = (props: CenterMarkerProps) => {
     // Reanimated shared value
@@ -29,20 +31,16 @@ const CenterMarker = (props: CenterMarkerProps) => {
     // Reanimated style
     const animatedStyle = useAnimatedStyle(() => {
         return {
-            height: scale.value * 40,
-            width: scale.value * 40,
+            transformOrigin: "center",
+            transform: [{ scale: scale.value }],
         };
     });
 
-    const animatedProps = useAnimatedStyle(() => {
-        return {
-            transform: [{ scale: scale.value }]
-        }
-    })
-
     useEffect(() => {
-        scale.value = props.selected ? withTiming(1.5) : withTiming(1)
-    }, [props.selected])
+        if (version !== "1.20.1") {
+            scale.value = props.selected ? withTiming(1.5) : withTiming(1);
+        }
+    }, [props.selected]);
 
     return (
         <AnimatedMarker
@@ -55,25 +53,32 @@ const CenterMarker = (props: CenterMarkerProps) => {
             id={props.id}
             coordinate={props.coordinate}
             animatedProps={props.animateProps}
-            style={[props.animatedStyle, {width: 60, height: 60, justifyContent: "center", alignItems: "center"}]}
+            style={[{ justifyContent: "center", alignItems: "center" }]}
         >
-                <View
-                    style={[{ justifyContent: "center", alignItems: "center", width: 60, height: 60 }]}
-                >
-                    <Animated.View
-                        style={[{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 60,
-                            alignItems: "center",
-                            justifyContent: "center",
-                            overflow: "hidden"
-                        }, animatedStyle]}
-                    >
-                        <LinearGradient style={StyleSheet.absoluteFill} colors={["#ff7878ff","#ff4545ff"]}/>
-                        <AniamtedIcon name={props.iconName as any} style={animatedProps} size={22} color="white" />
-                    </Animated.View>
-                </View>
+            <Animated.View
+                style={[
+                    {
+                        justifyContent: "center",
+                        alignItems: "center",
+                        width: 40,
+                        height: 40,
+                        borderRadius: 60,
+                        overflow: "hidden",
+                    },
+                     animatedStyle,
+                    version !== "1.20.1" ? props.animatedStyle : {},
+                ]}
+            >
+                <LinearGradient
+                    style={StyleSheet.absoluteFill}
+                    colors={["#ff7878ff", "#ff4545ff"]}
+                />
+                <AniamtedIcon
+                    name={props.iconName as any}
+                    size={22}
+                    color="white"
+                />
+            </Animated.View>
         </AnimatedMarker>
     );
 };
