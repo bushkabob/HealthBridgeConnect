@@ -141,8 +141,8 @@ export default function useSupercluster(
     // BASIC CLUSTER COMPUTATION
     const computeVisibleClusters = useCallback(
         async (targetZoom?: number) => {
-            setLoading(true)
             if (!supercluster || !mapRef.current) return {};
+            setLoading(true)
 
             const bounds = await mapRef.current.getMapBoundaries();
             const zoom = targetZoom ?? boundariesToZoom(bounds);
@@ -208,7 +208,7 @@ export default function useSupercluster(
         if (clusterTimeout.current) clearTimeout(clusterTimeout.current);
         clusterTimeout.current = setTimeout(() => {
             computeVisibleClusters();
-        }, 200) as unknown as number;
+        }, 200) as number;
         // } else {
         //     if (clusterTimeout.current) clearTimeout(clusterTimeout.current);
         //     clusterTimeout.current = null

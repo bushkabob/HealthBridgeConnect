@@ -140,9 +140,14 @@ export default function Map() {
 
     //Turn off activity indicator when displayed centers are updated
     useEffect(() => {
+        console.log("displaycenter set", loading, displayCenters.length)
         !loading && setSearchingCenters(false);
         // computeVisibleClusters()
     }, [displayCenters]);
+
+    useEffect(() => {
+        console.log("searching centers: ", searchingCenters)
+    }, [searchingCenters])
 
     //Move to detail center when it is selected
     useEffect(() => {
@@ -276,7 +281,9 @@ export default function Map() {
     useEffect(() => {
 
         if (allCenters.length > 0) {
+            console.log("set search 2")
             setSearchingCenters(true);
+            console.log(currentCenter)
             if (currentCenter !== undefined) {
                 determineNearbyCenters(
                     allCenters,

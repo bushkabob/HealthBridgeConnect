@@ -87,9 +87,11 @@ const DraggableContent = (props: DraggableContentProps) => {
 
     //Debounced search
     useEffect(() => {
+        console.log("search run")
         if (props.allCenters.length === 0) return;
         const handler = setTimeout(() => {
             if (searchValue === "") {
+                console.log("blank search")
                 props.setDisplayCenters(props.nearbyCenters);
                 setDisplayCities([]);
             } else {
