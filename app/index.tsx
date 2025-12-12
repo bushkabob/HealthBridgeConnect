@@ -9,7 +9,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useFocusEffect } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
-import { Dimensions, Platform, View } from "react-native";
+import { Alert, Dimensions, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import MapView from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -69,17 +69,17 @@ export default function Map() {
     const MAP_OFFSET =
         Platform.OS === "android"
             ? {
-                  top: safeAreaInsets.top,
-                  right: safeAreaInsets.right + 20,
-                  bottom: safeAreaInsets.bottom + 60,
-                  left: safeAreaInsets.left + 20,
-              }
+                top: safeAreaInsets.top,
+                right: safeAreaInsets.right + 20,
+                bottom: safeAreaInsets.bottom + 60,
+                left: safeAreaInsets.left + 20,
+            }
             : {
-                  top: 0,
-                  right: safeAreaInsets.right + 20,
-                  bottom: safeAreaInsets.bottom + 15,
-                  left: safeAreaInsets.left + 20,
-              };
+                top: 0,
+                right: safeAreaInsets.right + 20,
+                bottom: safeAreaInsets.bottom + 15,
+                left: safeAreaInsets.left + 20,
+            };
 
     const {
         supercluster,
@@ -134,7 +134,7 @@ export default function Map() {
                     val.distance * (unit === "Imperial" ? 0.621371 : 1) <
                     searchRadius
             )
-            .sort((a, b) => a.distance - b.distance).slice(0,100);
+            .sort((a, b) => a.distance - b.distance).slice(0, 100);
         setNearbyCenters(filteredCenters);
     };
 
@@ -157,7 +157,7 @@ export default function Map() {
         } else if (draggableOverlapImperatives.current !== undefined) {
             draggableOverlapImperatives.current.close();
         }
-        timeoutRef.current = setTimeout(()=>{computeVisibleClusters(); console.log("run timeout refresh")}, 1000)
+        timeoutRef.current = setTimeout(() => { computeVisibleClusters(); console.log("run timeout refresh") }, 1000)
     }, [detailCenter]);
 
     const animateToCenter = (detailCenter: FQHCSite) => {
@@ -177,8 +177,8 @@ export default function Map() {
             minZoom < MAX_ZOOM
                 ? minZoom + 1
                 : minZoom > MAX_ZOOM
-                ? minZoom - 1
-                : minZoom;
+                    ? minZoom - 1
+                    : minZoom;
 
         const zoomToUse = Math.ceil(
             prevZoom > minZoomMod ? prevZoom : minZoomMod
@@ -274,14 +274,17 @@ export default function Map() {
 
     //Search when unit, map center, or search radius changes
     useEffect(() => {
-        setSearchingCenters(true);
-        allCenters.length > 0 &&
-            currentCenter !== undefined &&
-            determineNearbyCenters(
-                allCenters,
-                currentCenter.lat,
-                currentCenter.lon
-            );
+
+        if (allCenters.length > 0) {
+            setSearchingCenters(true);
+            if (currentCenter !== undefined) {
+                determineNearbyCenters(
+                    allCenters,
+                    currentCenter.lat,
+                    currentCenter.lon
+                );
+            }
+        }
     }, [allCenters, searchRadius, unit, currentCenter]);
 
     //Get nearby centers when map loads
@@ -290,7 +293,7 @@ export default function Map() {
             const lat = location.lat;
             const lon = location.lon;
             moveToLocation({ lat: lat, lon: lon }, true);
-        });
+        }, true)
     }, [allCenters]);
 
     //Moves map to provided location
@@ -302,7 +305,7 @@ export default function Map() {
         const latDelta = deltas ? deltas.latDelta : 0.1;
         const lonDelta = deltas ? deltas.lonDelta : 0.1;
         if (mapRef.current !== undefined && mapRef.current !== null) {
-            setLocationColor("#60b1fc");
+            // setLocationColor("#60b1fc");
             mapRef.current.animateToRegion(
                 {
                     latitude: location.lat,
@@ -328,12 +331,32 @@ export default function Map() {
         callback?: (
             location: { lat: number; lon: number },
             shouldSetLocation: boolean
-        ) => void
+        ) => void,
+        isInit?: boolean
     ) {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
             console.warn("Location permission not granted");
-            return;
+            if (!isInit) { Alert.alert("No Location Access", "Please provide location access in settings to enable this feature") }
+            mapRef.current?.getCamera().then((cam) => {
+                callback && callback(
+                    {
+                        lat: cam.center.latitude,
+                        lon: cam.center.longitude
+                    },
+                    true
+                )
+            }
+            ).catch(() => {
+                callback && callback(
+                    {
+                        lat: 106.5348,
+                        lon: 38.7946
+                    },
+                    true
+                )
+            })
+            return
         }
         const location = await Location.getCurrentPositionAsync({});
         callback &&
@@ -541,9 +564,9 @@ export default function Map() {
                                             latitude:
                                                 item.coordinate.latitude +
                                                 latDelta *
-                                                    (useOffset
-                                                        ? currentOffset
-                                                        : 0),
+                                                (useOffset
+                                                    ? currentOffset
+                                                    : 0),
                                             longitude:
                                                 item.coordinate.longitude,
                                             latitudeDelta: latDelta,
@@ -616,11 +639,11 @@ export default function Map() {
                                 close={
                                     draggableOverlapImperatives.current
                                         ? () => {
-                                              draggableOverlapImperatives.current &&
-                                                  draggableOverlapImperatives.current.close();
-                                              setDetailCenter(undefined);
-                                          }
-                                        : () => {}
+                                            draggableOverlapImperatives.current &&
+                                                draggableOverlapImperatives.current.close();
+                                            setDetailCenter(undefined);
+                                        }
+                                        : () => { }
                                 }
                                 dialogShown={dialogShown}
                                 setDialogShown={markDialogShown}
