@@ -188,15 +188,11 @@ export default function useSupercluster(
                 clearSpiderfy()
             }
             setClusteredDisplayCenters(formatted)
-            setLoading(false)
-
-            console.log(formatted.length, " ", unpaddedBounds)
-            
+            setLoading(false)            
             return spiderfiedClusters;
         }, [supercluster])
 
     useEffect(() => {
-        console.log("Compute from cluster update")
         if (clusterTimeout.current) clearTimeout(clusterTimeout.current);
         computeVisibleClusters();
     }, [supercluster]);
@@ -211,7 +207,6 @@ export default function useSupercluster(
         // if (zoom !== prevZoom) {
         if (clusterTimeout.current) clearTimeout(clusterTimeout.current);
         clusterTimeout.current = setTimeout(() => {
-            console.log("Compute from timeut")
             computeVisibleClusters();
         }, 200) as unknown as number;
         // } else {

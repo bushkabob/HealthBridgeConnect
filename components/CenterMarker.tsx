@@ -22,7 +22,7 @@ interface CenterMarkerProps {
 
 const AnimatedMarker = Animated.createAnimatedComponent(Marker);
 
-const { version } = require("react-native-maps/package.json");
+// const { version } = require("react-native-maps/package.json");
 
 const CenterMarker = (props: CenterMarkerProps) => {
     // Reanimated shared value
@@ -30,15 +30,10 @@ const CenterMarker = (props: CenterMarkerProps) => {
     // Reanimated style
     const animatedStyle = useAnimatedStyle(() => {
         // Remove transformOrigin and use translateX/translateY to center the scale
-        const size = 40;
-        const scaleValue = scale.value;
-
         return {
             transform: [
-                // { translateX: (size * (scaleValue)) / 2 },
-                // { translateY: (size * (scaleValue)) / 2 },
-                { scale: scaleValue },
-            ],
+                { scale: scale.value }
+            ]
         };
     });
 
@@ -63,34 +58,43 @@ const CenterMarker = (props: CenterMarkerProps) => {
                 {
                     justifyContent: "center",
                     alignItems: "center",
-                    height: 40,
-                    width: 40,
-                },
+                }
             ]}
         >
-            <Animated.View
-                style={[
-                    {
-                        justifyContent: "center",
-                        alignItems: "center",
-                        width: 40,
-                        height: 40,
-                        borderRadius: 60,
-                        overflow: "hidden",
-                    },
-                    animatedStyle,
-                    props.animatedStyle,
-                ]}
-            >
-                <LinearGradient
-                    style={StyleSheet.absoluteFill}
-                    colors={["#ff7878ff", "#ff4545ff"]}
-                />
-                <Ionicons
-                    name={props.iconName as any}
-                    size={22}
-                    color="white"
-                />
+            <Animated.View 
+            style={[{
+                height: 40,
+                width: 40,
+                justifyContent: "center",
+                alignItems: "center",
+                backgroundColor: "red",
+                borderRadius: 60,
+            },props.animatedStyle]}>
+                <Animated.View
+                    style={[
+                        {
+                            justifyContent: "center",
+                            alignItems: "center",
+                            width: 40,
+                            height: 40,
+                            borderRadius: 60,
+                            overflow: "hidden",
+
+                        },
+                        animatedStyle,
+                        props.animatedStyle,
+                    ]}
+                >
+                    <LinearGradient
+                        style={StyleSheet.absoluteFill}
+                        colors={["#ff7878ff", "#ff4545ff"]}
+                    />
+                    <Ionicons
+                        name={props.iconName as any}
+                        size={22}
+                        color="white"
+                    />
+                </Animated.View>
             </Animated.View>
         </AnimatedMarker>
     );
