@@ -63,6 +63,8 @@ export default function Map() {
     const { animateToRegionAsync, onRegionChangeCompleteHandler } =
         useAwaitableMapAnimation(mapRef);
 
+    const timeoutRef = useRef<number | null>(null)
+
     const safeAreaInsets = useSafeAreaInsets();
     const MAP_OFFSET =
         Platform.OS === "android"
@@ -155,6 +157,7 @@ export default function Map() {
         } else if (draggableOverlapImperatives.current !== undefined) {
             draggableOverlapImperatives.current.close();
         }
+        timeoutRef.current = setTimeout(()=>{computeVisibleClusters(); console.log("run timeout refresh")}, 1000)
     }, [detailCenter]);
 
     const animateToCenter = (detailCenter: FQHCSite) => {
@@ -272,7 +275,6 @@ export default function Map() {
     //Search when unit, map center, or search radius changes
     useEffect(() => {
         setSearchingCenters(true);
-        console.log("nearby determined!")
         allCenters.length > 0 &&
             currentCenter !== undefined &&
             determineNearbyCenters(
@@ -418,7 +420,11 @@ export default function Map() {
                     onPanDrag={() => {
                         locationColor !== "gray" && setLocationColor("gray");
                     }}
+                    on
                     onRegionChangeComplete={(region) => {
+                        console.log("runnnn")
+                        timeoutRef.current && clearTimeout(timeoutRef.current)
+                        timeoutRef.current = null
                         onRegionChangeCompleteHandler();
                         const currentZoom = Math.ceil(
                             deltasToZoom(

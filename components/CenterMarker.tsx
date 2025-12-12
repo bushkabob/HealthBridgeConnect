@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect } from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet } from "react-native";
 import { LatLng, Marker } from "react-native-maps";
 import Animated, {
     useAnimatedStyle,
@@ -22,7 +22,7 @@ interface CenterMarkerProps {
 
 const AnimatedMarker = Animated.createAnimatedComponent(Marker);
 
-const { version } = require("react-native-maps/package.json");
+// const { version } = require("react-native-maps/package.json");
 
 const CenterMarker = (props: CenterMarkerProps) => {
     // Reanimated shared value
@@ -61,14 +61,15 @@ const CenterMarker = (props: CenterMarkerProps) => {
                 }
             ]}
         >
-            <View style={[{
+            <Animated.View 
+            style={[{
                 height: 40,
                 width: 40,
                 justifyContent: "center",
                 alignItems: "center",
                 backgroundColor: "red",
                 borderRadius: 60,
-            },]}>
+            },props.animatedStyle]}>
                 <Animated.View
                     style={[
                         {
@@ -94,7 +95,7 @@ const CenterMarker = (props: CenterMarkerProps) => {
                         color="white"
                     />
                 </Animated.View>
-            </View>
+            </Animated.View>
         </AnimatedMarker>
     );
 };

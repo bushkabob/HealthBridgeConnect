@@ -81,6 +81,10 @@ const DraggableContent = (props: DraggableContentProps) => {
         return filteredCenters;
     };
 
+    useEffect(() => {
+        !searchActive && setSearchValue("")
+    }, [searchActive])
+
     //Debounced search
     useEffect(() => {
         if (props.allCenters.length === 0) return;
@@ -258,6 +262,7 @@ const DraggableContent = (props: DraggableContentProps) => {
                 cities={displayCities}
                 setCenter={props.setCurrentCenter}
                 headerHeight={searchActive ? headerHeight + 50 : headerHeight}
+                setSearchActive={setSearchActive}
                 mapRef={props.mapRef}
                 minimizeScroll={() => {
                     setViewHeight(0.0, 300);
@@ -271,6 +276,7 @@ export default DraggableContent;
 
 interface SearchResultsProps {
     setDetailCenter: Function;
+    setSearchActive: Function
     searchingCenters: boolean;
     unit: string;
     displayCenters: FQHCSite[];
@@ -399,7 +405,6 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
                             animated: true,
                             offset: 0,
                         });
-
                         !val.item.isCity
                             ? (setTimeout(
                                   () =>
@@ -409,10 +414,12 @@ const SearchResults = React.memo((props: SearchResultsProps) => {
                                         )[0]
                                     )
                               ,1000))
-                            : props.setCenter({
+                              //Movement to center will take care of animation
+                            : (props.setCenter({
                                   lat: val.item.lat,
                                   lon: val.item.lon,
-                              });
+                              }), props.setSearchActive(false)
+                            );
                     };
                     return (
                         <CenterInfoSearch
