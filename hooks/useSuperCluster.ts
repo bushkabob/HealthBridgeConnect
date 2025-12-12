@@ -199,7 +199,7 @@ export default function useSupercluster(
 
     // ZOOM-DEBOUNCED RECALC
     const safeComputeClusters = useCallback(async () => {
-        if (!mapRef.current) return;
+        if (!mapRef.current || !supercluster) return;
         setLoading(true)
         const boundaries = await mapRef.current.getMapBoundaries();
         const zoom = boundariesToZoom(boundaries);
@@ -221,7 +221,6 @@ export default function useSupercluster(
         prevZoom,
         spiderfiedClusters,
         expandedClusterId,
-
         safeComputeClusters,
         computeVisibleClusters,
         expandCluster,
