@@ -92,7 +92,7 @@ export default function Map() {
         closeCluster,
         clearSpiderfy,
         computeVisibleClusters,
-    } = useSupercluster(displayCenters, MAP_OFFSET, mapRef, setSearchingCenters);
+    } = useSupercluster(allCenters, MAP_OFFSET, mapRef, setSearchingCenters);
 
     //Loads data from db
     useEffect(() => {
