@@ -257,3 +257,27 @@ export function useAwaitableMapAnimation(
         onRegionChangeCompleteHandler,
     };
 }
+
+export const checkNeedsUpdate = async (lastUpdate: number) => {
+    const params = new URLSearchParams({
+        client_timestamp: lastUpdate.toString(),
+        platform: "web"
+    });
+
+    const res = await fetch(`https://api.healthbridgelabs.com/latest_timestamp?${params.toString()}`)
+    if(!res.ok) {
+        return false
+    } else {
+        const responseJson = await res.json()
+        return responseJson["update_needed"]
+    }
+}
+
+export const downloadNewDb = async () => {
+    const res = await fetch(`https://api.healthbridgelabs.com/fetch_data`)
+    if(!res.ok) {
+        return false
+    } else {
+        
+    }
+}

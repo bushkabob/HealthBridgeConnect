@@ -1,15 +1,14 @@
 import { useThemeColor } from "@/hooks/use-theme-color";
 import {
-	DarkTheme,
-	DefaultTheme,
-	ThemeProvider,
+    DarkTheme,
+    DefaultTheme,
+    ThemeProvider,
 } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StyleSheet, useColorScheme, View } from "react-native";
 
 export default function TabLayout() {
     const colorScheme = useColorScheme();
-    console.log(colorScheme);
     const background = useThemeColor({}, "background");
 
     return (

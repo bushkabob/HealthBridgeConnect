@@ -20,10 +20,12 @@ import SpiderfyCluster, { determineDeltas } from "@/components/SpiderfyCluster";
 import useSupercluster, { Center } from "@/hooks/useSuperCluster";
 import { FQHCSite, MapCenter } from "../types/types";
 import {
+    checkNeedsUpdate,
     deltasToZoom,
+    downloadNewDb,
     getMinZoomForPoint,
     haversineDistance,
-    useAwaitableMapAnimation,
+    useAwaitableMapAnimation
 } from "./utils";
 
 const INITIAL_REGION = {
@@ -107,6 +109,23 @@ export default function Map() {
             }
         }
     }, [loading]);
+
+    useEffect(() => {
+        checkData()
+    }, [])
+
+    const checkData = async () => {
+        const lastUpdate = await AsyncStorage.getItem("lastUpdate");
+        if (lastUpdate === null) {
+            await AsyncStorage.setItem("lastUpdate", "20251001010101");
+        }
+        const lastUpdateNumber = lastUpdate ? Number(lastUpdate) : 20251001010101
+        checkNeedsUpdate(lastUpdateNumber).then((needsUpdate) => {
+            needsUpdate && downloadNewDb()
+        }).catch((err) => {
+            console.log(err)
+        })
+    }
 
     //Determines centers near location
     const determineNearbyCenters = (
@@ -377,6 +396,7 @@ export default function Map() {
     //Loads users preferences
     const getData = async () => {
         try {
+            //Distance unit
             const asycnUnit = await AsyncStorage.getItem("unitPref");
             if (asycnUnit !== null) {
                 unit !== asycnUnit && setUnit(asycnUnit);
@@ -384,6 +404,7 @@ export default function Map() {
                 await AsyncStorage.setItem("unitPref", "Imperial");
                 setUnit("Imperial");
             }
+            //Search radius
             const asyncSearchRadius = await AsyncStorage.getItem("radiusPref");
             if (asyncSearchRadius !== null) {
                 Number(asyncSearchRadius) !== searchRadius &&
@@ -392,10 +413,21 @@ export default function Map() {
                 await AsyncStorage.setItem("radiusPref", "10");
                 setSearchRadius(Number("10"));
             }
+            //Data source updates
+            const cmsDate = await AsyncStorage.getItem("cmsDate");
+            if (cmsDate === null) {
+                await AsyncStorage.setItem("cmsDate", "2025-10-01T00:00:00");
+            }
+            const hrsaDate = await AsyncStorage.getItem("hrsaDate");
+            if (hrsaDate === null) {
+                await AsyncStorage.setItem("hrsaDate", "2025-10-01T00:00:00");
+            }
+            //Has warning been shown?
             const dialogShown = await AsyncStorage.getItem("dialogShown");
             if (dialogShown === "true") {
                 setDialogShown(true);
             }
+
         } catch (e) {
             console.log(e);
         }
