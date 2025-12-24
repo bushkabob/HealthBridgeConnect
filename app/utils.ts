@@ -1,4 +1,7 @@
 import { BlurView } from "expo-blur";
+import { Directory, File, Paths } from "expo-file-system";
+import 'expo-standard-web-crypto';
+import JSZip from "jszip";
 import { Dimensions } from "react-native";
 import MapView, { BoundingBox, EdgePadding, Region } from "react-native-maps";
 import Animated from "react-native-reanimated";
@@ -274,10 +277,24 @@ export const checkNeedsUpdate = async (lastUpdate: number) => {
 }
 
 export const downloadNewDb = async () => {
-    const res = await fetch(`https://api.healthbridgelabs.com/fetch_data`)
-    if(!res.ok) {
-        return false
-    } else {
-        
+    const zipUrl = `https://api.healthbridgelabs.com/fetch_data`
+    const zipPath = new File(Paths.document, "db.zip")
+    const extractDir = new Directory(Paths.document, "db")
+
+    try {
+        await File.downloadFileAsync(zipUrl, zipPath)
+        const zipBase64 = await zipPath.base64()
+        const zip = await JSZip.loadAsync(zipBase64, { base64: true })
+        const db = Object.keys(zip.files)[Object.keys(zip.files).findIndex(v=>v.includes(".db") && !v.includes(".db.sig"))]
+        const sig = Object.keys(zip.files)[Object.keys(zip.files).findIndex(v=>v.includes(".db.sig"))]
+        const metadata = Object.keys(zip.files)[Object.keys(zip.files).findIndex(v=>v.includes(".json"))]
+        console.log("zip here")
+        console.log(db, sig, metadata)
+    } catch (err) {
+        console.log("ZIP extraction failed: ", err)
+    } finally {
+        if(zipPath.exists) {
+            zipPath.delete()
+        }
     }
 }

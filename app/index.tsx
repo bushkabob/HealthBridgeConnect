@@ -94,7 +94,7 @@ export default function Map() {
         closeCluster,
         clearSpiderfy,
         computeVisibleClusters,
-    } = useSupercluster(allCenters, MAP_OFFSET, mapRef, setSearchingCenters);
+    } = useSupercluster(displayCenters, MAP_OFFSET, mapRef, setSearchingCenters);
 
     //Loads data from db
     useEffect(() => {
@@ -121,7 +121,8 @@ export default function Map() {
         }
         const lastUpdateNumber = lastUpdate ? Number(lastUpdate) : 20251001010101
         checkNeedsUpdate(lastUpdateNumber).then((needsUpdate) => {
-            needsUpdate && downloadNewDb()
+            console.log("needs update ", needsUpdate)
+            downloadNewDb()
         }).catch((err) => {
             console.log(err)
         })
